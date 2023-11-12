@@ -2,14 +2,27 @@
 import fitz
 
 import win32com.client
-import datetime
+import datetime, pytz, locale, calendar
 from collections import namedtuple
  
  
 event = namedtuple("event", "Start Subject Duration")
+
+# set the timezone to US/Pacific
+# timezone = pytz.timezone('US/Central')
+# datetime.datetime.now(timezone)
+ 
+# # get the current time in the default timezone
+# now = datetime.datetime.now()
+# print(now)
+
+from collections import namedtuple
+
+event = namedtuple("event", "Start Subject Duration")
  
  
 def get_date(datestr):
+    # tz = datetime.datetime.now().astimezone().tzinfo
     try:  # py3
         adate = datetime.datetime.fromtimestamp(datestr.Start.timestamp())
     except Exception:
@@ -17,7 +30,7 @@ def get_date(datestr):
     return adate
  
  
-def getCalendarEntries(days=1, dateformat="%d/%m/%Y"):
+def getCalendarEntries(days=1, dateformat="%m/%d/%Y"):
     """
     Returns calender entries for days default is 1
     Returns list of events
@@ -26,29 +39,49 @@ def getCalendarEntries(days=1, dateformat="%d/%m/%Y"):
     ns = Outlook.GetNamespace("MAPI")
     appointments = ns.GetDefaultFolder(9).Items
     appointments.Sort("[Start]")
-    appointments.IncludeRecurrences = "True"
+    appointments.IncludeRecurrences = True
     today = datetime.datetime.today()
     begin = today.date().strftime(dateformat)
     tomorrow = datetime.timedelta(days=days) + today
     end = tomorrow.date().strftime(dateformat)
     appointments = appointments.Restrict(
-        "[Start] >= '" + begin + "' AND [END] <= '" + end + "'")
+        "[Start] >= '" + begin + "' AND [End] <= '" + end + "'")
     events = []
     for a in appointments:
         adate = get_date(a)
-        events.append(event(adate, a.Subject, a.Duration))
+        if a.IsRecurring:
+            EventSubject = a.Subject
+            EventSubject = EventSubject + " (Recurring)"
+        events.append(event(a.StartInStartTimeZone, EventSubject, a.Duration))
     return events
- 
- 
-if __name__ == "__main__":
-    events = getCalendarEntries()
+
+def GetSingleDayEvents(all_events, date):
+    date = datetime.datetime.strptime(date, '%m/%d/%Y')
+    event_list = ""
+    for event in all_events:
+        if event.Start.year == date.year:
+            if event.Start.month == date.month:
+                if event.Start.day == date.day:
+                    event_list = event_list + str(event.Start.hour) + ":" + str(event.Start.minute) + " " + event.Subject + " Duration: "+ str(event.Duration)+"\n"
+    return event_list
+
+events = getCalendarEntries(7)
+for event in events:
+    print(event)
+    
+event_list = GetSingleDayEvents(events, "11/14/2023")
+today = datetime.datetime.strptime("11/14/2023",'%m/%d/%Y')
+today_week = str(today.isocalendar()[1])
+today_month = calendar.month_name[today.month]
+today_dayname = today.strftime("%A")
+today_daynumber = str(today.day)
 
 # Open the input PDF file in read mode
 input_file_name = "input.pdf"
 input_file = fitz.open(input_file_name)
 
 # Define the text to search for
-text_to_search = "January\nWeek 3\nFriday, 20"
+text_to_search = today_month+"\nWeek "+today_week+"\n"+today_dayname+", "+today_daynumber
 text_to_add = "My calendar entry"
 
 print("underlining words containing '%s' in document '%s'" % (text_to_search, input_file.name))
@@ -67,7 +100,7 @@ for page in input_file:  # scan through the pages
 			text_insert_location = page.search_for("2 PM")
 			if text_insert_location:
 				text_insert_location = fitz.Rect(text_insert_location[1])
-				page.insert_text(text_insert_location.bl + (135,0),"Outlook Events:\nMy inserted text")
+				page.insert_text(text_insert_location.bl + (135,0),"Outlook Events:\n"+event_list)
 
 
 
