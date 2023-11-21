@@ -18,7 +18,7 @@ event = namedtuple("event", "Start Subject Duration")
 
 from collections import namedtuple
 
-event = namedtuple("event", "Start Subject Duration")
+
 
 
 def get_date(datestr):
@@ -35,6 +35,7 @@ def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
     Returns calender entries for x days default is 1
     Returns list of events
     """
+    event = namedtuple("event", "Start Subject Duration")
     DATE_FORMAT = "%m/%d/%Y"
     Outlook = win32com.client.Dispatch("Outlook.Application")
     ns = Outlook.GetNamespace("MAPI")
@@ -53,9 +54,9 @@ def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
     for a in appointments:
         # adate = get_date(a)
         if a.IsRecurring:
-            EventSubject = a.Subject + " (Recurring)"
-            # EventSubject = EventSubject + " (Recurring)"
-        events.append(event(a.StartInStartTimeZone, EventSubject, a.Duration))
+            a.Subject = a.Subject + " (Recurring)"
+
+        events.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
     return events
 
 
@@ -68,89 +69,122 @@ def GetSingleDayEvents(all_events, date_str):
             and event.Start.month == date.month
             and event.Start.day == date.day
         ):
+            event_end = datetime.timedelta(minutes=event.Duration) + event.Start
+            event_end_str = event_end.strftime("%I:%M%p ")
             event_string = event.Start.strftime("%I:%M%p - ") \
-                + event.Subject \
-                + " - (" \
-                + str(event.Duration) \
-                + " Min)"
+                + event_end_str + " " \
+                + event.Subject
             event_list.append(event_string)
     return event_list
 
 def print_descr(annot,description):
+    red = (1, 0, 0)
+    blue = (0, 0, 1)
+    gold = (1, 1, 0)
+    green = (0, 1, 0)
+    
     """Print a short description to the right of each annot rect."""
     annot.parent.insert_text(
         annot.rect.bl -2, "%s" % description, color=blue, fontsize=9, fontname="TiRo"
     )
+    
+def events2pdf(date2update, event_list):
 
-day2process = datetime.datetime.now()
-events = getCalendarEntries(day2process, 7)
-for event in events:
-    print(event)
+    new_doc = False  # indicator if anything found at all
 
-event_list = GetSingleDayEvents(events, date_str=day2process.strftime("%m/%d/%Y"))
-# today = datetime.datetime.strptime("11/14/2023", "%m/%d/%Y")
-day2process_week = str(day2process.isocalendar()[1])
-day2process_month = calendar.month_name[day2process.month]
-day2process_dayname = day2process.strftime("%A")
-day2process_daynumber = str(day2process.day)
+    red = (1, 0, 0)
+    blue = (0, 0, 1)
+    gold = (1, 1, 0)
+    green = (0, 1, 0)
+
+    day2process_week = str(day2process.isocalendar()[1])
+    day2process_month = calendar.month_name[day2process.month]
+    day2process_dayname = day2process.strftime("%A")
+    day2process_daynumber = str(day2process.day)
+    
+    # Define the text to search for
+    text_to_search = (
+        day2process_month + "\n"
+        + "Week " + day2process_week + "\n" 
+        + day2process_dayname + ", " + day2process_daynumber
+    )
+    # print(
+    # "Searching for '%s' in document '%s'"
+    # % (text_to_search.replace("\n", " "), input_file.name)
+    # )
+    
+    for page in input_file:  # scan through the pages
+        locations = None
+        locations = page.search_for(text_to_search)
+        if locations:
+            new_doc = True
+            print("Adding Outlook events to '%s' on page %i" % (text_to_search.replace("\n", " "), page.number + 1))
+            # for location in locations:
+            #     page.add_highlight_annot(location)  # underline
+            
+            displ = fitz.Rect(40, 0, 40, 0)    
+            schedule_location = page.search_for("Schedule")
+            nine_am_location = page.search_for("9 AM")
+            ten_am_location = page.search_for("10 AM")
+            eleven_am_location = page.search_for("11 AM")
+            twelve_pm_location =  page.search_for("12 PM")
+            one_pm_location =  page.search_for("1 PM")
+            two_pm_location =  page.search_for("2 PM")
+            three_pm_location =  page.search_for("3 PM")
+            four_pm_location =  page.search_for("4 PM")
+            five_pm_location =  page.search_for("5 PM")
+            six_pm_location =  page.search_for("6 PM")
+            seven_pm_location =  page.search_for("7 PM")
+            eight_pm_location =  page.search_for("8 PM")
+
+            if two_pm_location:
+                text_insert_location = fitz.Rect(two_pm_location[1])
+
+                # page.insert_text(
+                #     text_insert_location.bl + (135, 0), events2pdf
+                # )
+                
+            events2pdf = "\n"
+            for event in event_list:
+                events2pdf = events2pdf + event + "\n"
+            annot = page.add_freetext_annot(schedule_location[0] + (100, 160, 100, 160), events2pdf, fontsize=9, fontname="TiRo")
+            info = annot.info
+            info["title"] = "Outlook Events"
+
+            annot.parent.insert_text(
+                annot.rect.tl +(40,5), "%s" % "(Show Outlook Events)", color=blue, fontsize=9, fontname="TiRo"
+             )
+
+            page.add_highlight_annot(page.search_for("(Show Outlook Events)"))  # underline
+            text_loc = page.search_for("(Show Outlook Events)")
+            annot.set_rect(text_loc[0])
+            annot.set_popup(schedule_location[0] + (100, 160, 100, 160))
+            annot.set_info(info)
+            annot.update()
+                
+            return new_doc
 
 # Open the input PDF file in read mode
 input_file_name = "input.pdf"
 input_file = fitz.open(input_file_name)
 
-# Define the text to search for
-text_to_search = (
-    day2process_month + "\n"
-    + "Week " + day2process_week + "\n" 
-    + day2process_dayname + ", " + day2process_daynumber
-)
+i = 0
+while i <= 6:
+    day2process = datetime.timedelta(days=i) + datetime.datetime.now()
 
-print(
-    "Highlighting words containing '%s' in document '%s'"
-    % (text_to_search, input_file.name)
-)
+    events = getCalendarEntries(day2process, 7)
+    # for event in events:
+    #     print(event)
+    date_str=day2process.strftime("%m/%d/%Y")
+    event_list = GetSingleDayEvents(events, date_str)
+# today = datetime.datetime.strptime("11/14/2023", "%m/%d/%Y")
 
-new_doc = False  # indicator if anything found at all
-
-red = (1, 0, 0)
-blue = (0, 0, 1)
-gold = (1, 1, 0)
-green = (0, 1, 0)
-
-for page in input_file:  # scan through the pages
-    locations = None
-    locations = page.search_for(text_to_search)
-    if locations:
-        new_doc = True
-        print("found '%s' on page %i" % (text_to_search, page.number + 1))
-        for location in locations:
-            page.add_highlight_annot(location)  # underline
+    if len(event_list) >= 1:
+        new_doc = events2pdf(day2process, event_list)
+    else:
+        print("No outlook events for %s. skipping..." % date_str)
         
-        displ = fitz.Rect(40, 0, 40, 0)    
-        schedule_location = page.search_for("Schedule")
-        nine_am_location = page.search_for("9 AM")
-        ten_am_location = page.search_for("10 AM")
-        eleven_am_location = page.search_for("11 AM")
-        twelve_pm_location =  page.search_for("12 PM")
-        one_pm_location =  page.search_for("1 PM")
-        two_pm_location =  page.search_for("2 PM")
-        three_pm_location =  page.search_for("3 PM")
-        four_pm_location =  page.search_for("4 PM")
-        five_pm_location =  page.search_for("5 PM")
-        six_pm_location =  page.search_for("6 PM")
-        seven_pm_location =  page.search_for("7 PM")
-        eight_pm_location =  page.search_for("8 PM")
-
-        if two_pm_location:
-            text_insert_location = fitz.Rect(two_pm_location[1])
-            events2pdf = "\n"
-            for event in event_list:
-                events2pdf = events2pdf + event + "\n"
-            # page.insert_text(
-            #     text_insert_location.bl + (135, 0), events2pdf
-            # )
-            annot = page.add_freetext_annot(schedule_location[0] + displ, events2pdf, fontsize=9, fontname="TiRo")
-            print_descr(annot,description="(Show Outlook Events)")
+    i += 1
 
 
 if new_doc:
