@@ -2,7 +2,7 @@
 import fitz
 
 import win32com.client
-import datetime, pytz, locale, calendar
+import datetime, pytz, locale, calendar, os, textwrap, csv
 from collections import namedtuple
 
 
@@ -28,6 +28,20 @@ def get_date(datestr):
     except Exception:
         adate = datetime.datetime.fromtimestamp(int(datestr.Start))
     return adate
+
+def send_mail(to, subject, body, attachment_name):
+    outlook = win32com.client.Dispatch('outlook.application')
+    mail = outlook.CreateItem(0)
+    mail.To = to
+    mail.Subject = subject
+    mail.Body = body
+    # mail.HTMLBody = '<h2>HTML Message body</h2>' #this field is optional
+
+    # To attach a file to the email (optional):
+    attachment  = attachment_name
+    mail.Attachments.Add(attachment)
+
+    mail.Send()
 
 
 def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
@@ -69,11 +83,13 @@ def GetSingleDayEvents(all_events, date_str):
             and event.Start.month == date.month
             and event.Start.day == date.day
         ):
+            wrapped_subject = textwrap.wrap( event.Subject,50,break_long_words=True)
+            subject = "\n".join(wrapped_subject)
             event_end = datetime.timedelta(minutes=event.Duration) + event.Start
             event_end_str = event_end.strftime("%I:%M%p ")
             event_string = event.Start.strftime("%I:%M%p - ") \
-                + event_end_str + " " \
-                + event.Subject
+                + event_end_str + "\n" \
+                + subject  + "\n"
             event_list.append(event_string)
     return event_list
 
@@ -88,6 +104,39 @@ def print_descr(annot,description):
         annot.rect.bl -2, "%s" % description, color=blue, fontsize=9, fontname="TiRo"
     )
     
+def links2csv(filename):
+    all_links = []
+    # Open the input PDF file in read mode
+    input_file = fitz.open(filename)
+    output_file = os.path.splitext(filename)[0]+'.csv'
+    for page in input_file:  # scan through the pages
+        page_links = page.get_links()
+        all_links.append(page_links)
+    
+    myFile = open(output_file, 'w', newline='')
+    writer = csv.writer(myFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    for row in all_links:
+        writer.writerow(row)
+    myFile.close()
+    
+def csv2links(filename):
+    all_links = []
+    with open(filename, 'rU', newline='') as csv_file: 
+        all_links = list(csv.reader(csv_file, delimiter=",", quotechar='"')) 
+    csv_file.close()
+    return all_links
+    
+def links2pdf(input_file, all_links):
+    page_counter = 0
+    
+    for page in input_file:  # scan through the pages
+        for link in all_links[page_counter]:
+            page_links = page.update_link(link)
+            
+        page_counter += 1
+
+        
+        
 def events2pdf(date2update, event_list):
 
     new_doc = False  # indicator if anything found at all
@@ -117,6 +166,7 @@ def events2pdf(date2update, event_list):
         locations = None
         locations = page.search_for(text_to_search)
         if locations:
+            page_links = page.get_links()
             new_doc = True
             print("Adding Outlook events to '%s' on page %i" % (text_to_search.replace("\n", " "), page.number + 1))
             # for location in locations:
@@ -144,7 +194,7 @@ def events2pdf(date2update, event_list):
                 #     text_insert_location.bl + (135, 0), events2pdf
                 # )
                 
-            events2pdf = "\n"
+            events2pdf = "Outlook Events\n"
             # text_9am = []
             # text_10am = []
             # text_11am = []
@@ -195,21 +245,28 @@ def events2pdf(date2update, event_list):
             # page.insert_text(six_pm_location[0].tl + (25.6), text_06pm, fontsize=9, fontname="TiRo")
             # page.insert_text(seven_pm_location[0].tl + (25.6), text_07pm, fontsize=9, fontname="TiRo")
             # page.insert_text(eight_pm_location[0].tl + (25.6), text_08pm, fontsize=9, fontname="TiRo")
-            annot = page.add_freetext_annot(schedule_location[0] + (100, 160, 100, 160), events2pdf, fontsize=9, fontname="TiRo")
-            info = annot.info
-            info["title"] = "Outlook Events"
-            annot.parent.insert_text(
-                annot.rect.tl +(40,5), "%s" % "(Show Outlook Events)", color=blue, fontsize=9, fontname="TiRo"
-             )
+            # annot = page.add_freetext_annot(schedule_location[0] + (100, 160, 100, 160), events2pdf, fontsize=9, fontname="TiRo")
+            annot = page.insert_text(schedule_location[0].tl + (140, 165), events2pdf, color=blue, fontsize=10.5, fontname="TiRo")
+            # info = annot.info
+            # info["title"] = "Outlook Events"
+            # annot.parent.insert_text(
+            #     annot.rect.tl +(40,5), "%s" % "(Show Outlook Events)", color=blue, fontsize=9, fontname="TiRo"
+            #  )
 
-            page.add_highlight_annot(page.search_for("(Show Outlook Events)"))  # underline
-            text_loc = page.search_for("(Show Outlook Events)")
-            # annot.set_rect(text_loc[0]+ (-75, 5))
+            # page.add_highlight_annot(page.search_for("(Show Outlook Events)"))  # underline
+            # text_loc = page.search_for("(Show Outlook Events)")
+            # annot.set_rect(text_loc[0]+ (-75,5, -75,5))
             # annot.set_popup(schedule_location[0] + (75, 170, 75, 170))
-            annot.set_info(info)
-            annot.update()
+            # annot.set_info(info)
+            # annot.update()
                 
             return new_doc
+
+# generate links csv from original planner file
+links2csv("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.pdf")
+
+# generate list of links from csv file
+all_links = csv2links("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.csv")
 
 # Open the input PDF file in read mode
 input_file_name = "input.pdf"
@@ -233,6 +290,10 @@ while i <= 6:
         
     i += 1
 
+links2pdf(input_file,all_links)
+
 
 if new_doc:
     input_file.save("marked-" + input_file.name)
+    attachment_filename = os.path.abspath("marked-" + input_file.name)
+    # send_mail(to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>', subject = 'My 2023 Planner',body = 'My 2023 Planner', attachment_name=attachment_filename)
