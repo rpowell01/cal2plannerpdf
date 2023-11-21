@@ -145,20 +145,67 @@ def events2pdf(date2update, event_list):
                 # )
                 
             events2pdf = "\n"
+            # text_9am = []
+            # text_10am = []
+            # text_11am = []
+            # text_12pm = []
+            # text_01pm = []
+            # text_02pm = []
+            # text_03pm = []
+            # text_04pm = []
+            # text_05pm = []
+            # text_06pm = []
+            # text_07pm = []
+            # text_08pm = []
             for event in event_list:
+                # if event.find("08:") > -1 or event.find("09:") > -1 and event.find("AM - ") > -1:
+                #     text_9am.append(event) 
+                # if event.find("10:") > -1 and event.find("AM - ") > -1:
+                #     text_10am.append(event) 
+                # if event.find("11:") > -1 and event.find("AM - ") > -1:
+                #     text_11am.append(event) 
+                # if event.find("12:") > -1 and event.find("PM - ") > -1:
+                #     text_12pm.append(event) 
+                # if event.find("01:") > -1 and event.find("PM - ") > -1:
+                #     text_01pm.append(event) 
+                # if event.find("02:") > -1 and event.find("PM - ") > -1:
+                #     text_02pm.append(event) 
+                # if event.find("03:") > -1 and event.find("PM - ") > -1:
+                #     text_03pm.append(event) 
+                # if event.find("04:") > -1 and event.find("PM - ") > -1:
+                #     text_04pm.append(event) 
+                # if event.find("05:") > -1 and event.find("PM - ") > -1:
+                #     text_05pm.append(event) 
+                # if event.find("06:") > -1 and event.find("PM - ") > -1:
+                #     text_06pm.append(event) 
+                # if event.find("07:") > -1 and event.find("PM - ") > -1:
+                #     text_07pm.append(event) 
+                # if event.find("08:") > -1 and event.find("PM - ") > -1:
+                #     text_08pm.append(event) 
                 events2pdf = events2pdf + event + "\n"
+            # page.insert_text(nine_am_location[0].tl + (25,6), text_9am, fontsize=9, fontname="TiRo")
+            # page.insert_text(ten_am_location[0].tl + (25,6), text_10am, fontsize=9, fontname="TiRo")
+            # page.insert_text(eleven_am_location[0].tl + (25.6), text_11am, fontsize=9, fontname="TiRo")
+            # page.insert_text(twelve_pm_location[0].tl + (25.6), text_12pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(one_pm_location[0].tl + (25.6), text_01pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(two_pm_location[0].tl + (25.6), text_02pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(three_pm_location[0].tl + (25.6), text_03pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(four_pm_location[0].tl + (25.6), text_04pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(five_pm_location[0].tl + (25.6), text_05pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(six_pm_location[0].tl + (25.6), text_06pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(seven_pm_location[0].tl + (25.6), text_07pm, fontsize=9, fontname="TiRo")
+            # page.insert_text(eight_pm_location[0].tl + (25.6), text_08pm, fontsize=9, fontname="TiRo")
             annot = page.add_freetext_annot(schedule_location[0] + (100, 160, 100, 160), events2pdf, fontsize=9, fontname="TiRo")
             info = annot.info
             info["title"] = "Outlook Events"
-
             annot.parent.insert_text(
                 annot.rect.tl +(40,5), "%s" % "(Show Outlook Events)", color=blue, fontsize=9, fontname="TiRo"
              )
 
             page.add_highlight_annot(page.search_for("(Show Outlook Events)"))  # underline
             text_loc = page.search_for("(Show Outlook Events)")
-            annot.set_rect(text_loc[0])
-            annot.set_popup(schedule_location[0] + (100, 160, 100, 160))
+            # annot.set_rect(text_loc[0]+ (-75, 5))
+            # annot.set_popup(schedule_location[0] + (75, 170, 75, 170))
             annot.set_info(info)
             annot.update()
                 
