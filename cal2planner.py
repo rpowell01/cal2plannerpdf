@@ -1,8 +1,9 @@
 # Import the fitz library
 import fitz
+import jsonpickle
 
 import win32com.client
-import datetime, pytz, locale, calendar, os, textwrap, csv
+import datetime, pytz, locale, calendar, os, textwrap, csv, json
 from collections import namedtuple
 
 
@@ -104,38 +105,68 @@ def print_descr(annot,description):
         annot.rect.bl -2, "%s" % description, color=blue, fontsize=9, fontname="TiRo"
     )
     
-def links2csv(filename):
+def links2json(filename):
     all_links = []
     # Open the input PDF file in read mode
     input_file = fitz.open(filename)
-    output_file = os.path.splitext(filename)[0]+'.csv'
+    output_file = os.path.splitext(filename)[0]+'.json'
     for page in input_file:  # scan through the pages
-        page_links = page.get_links()
+        page_links = page.links()
         all_links.append(page_links)
+        
+    json_object = jsonpickle.encode(all_links)
+    # json_object = json.dumps(all_links, indent=4)
+    with open(output_file, 'w', newline='') as myfile:
+        myfile.write(json_object)
+    # writer = csv.writer(myFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     
-    myFile = open(output_file, 'w', newline='')
-    writer = csv.writer(myFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    for row in all_links:
-        writer.writerow(row)
-    myFile.close()
+    # writer = csv.writer(myFile, delimiter=',')
+    # for row in all_links:
+    #     writer.writerow(row)
+    # myFile.close()
+    return all_links
     
-def csv2links(filename):
+def json2links(filename):
     all_links = []
-    with open(filename, 'rU', newline='') as csv_file: 
-        all_links = list(csv.reader(csv_file, delimiter=",", quotechar='"')) 
-    csv_file.close()
+    with open(filename, 'rU', newline='') as json_file: 
+        # all_links = list(csv.reader(csv_file, delimiter=",", quotechar='"')) 
+        # all_links = list(csv.reader(csv_file, delimiter=",")) 
+        # all_links = json.load(json_file)
+        json_str = json_file.read()
+        all_links = jsonpickle.decode(json_str)
+    json_file.close()
     return all_links
     
 def links2pdf(input_file, all_links):
     page_counter = 0
     
     for page in input_file:  # scan through the pages
+        # current_links = page.get_links()
+        # for link in current_links:
+        #     page.delete_link(link)
         for link in all_links[page_counter]:
-            page_links = page.update_link(link)
+            # test2 = link.replace("'","\"")
+            # test_dict = json.loads(test2)
+            # link["name"]=link["name"].replace("%20"," ")
+            print(link)
+            page.delete_link(link)
+            link["xref"] = input_file.get_new_xref()
+            page.insert_link(link)
             
         page_counter += 1
 
-        
+def str_to_dict(string):
+    # remove the curly braces from the string
+    string = string.strip('{}')
+ 
+    # split the string into key-value pairs
+    pairs = string.split(', ')
+ 
+    # use a dictionary comprehension to create
+    # the dictionary, converting the values to
+    # integers and removing the quotes from the keys
+    return {key[1:-2]: int(value) for key, value in (pair.split(': ') for pair in pairs)}
+         
         
 def events2pdf(date2update, event_list):
 
@@ -262,11 +293,11 @@ def events2pdf(date2update, event_list):
                 
             return new_doc
 
-# generate links csv from original planner file
-links2csv("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.pdf")
+# generate links json from original planner file
+original_links = links2json("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.pdf")
 
-# generate list of links from csv file
-all_links = csv2links("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.csv")
+# generate list of links from json file
+jsonfile_links = json2links("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.json")
 
 # Open the input PDF file in read mode
 input_file_name = "input.pdf"
@@ -290,7 +321,7 @@ while i <= 6:
         
     i += 1
 
-links2pdf(input_file,all_links)
+links2pdf(input_file,jsonfile_links)
 
 
 if new_doc:
