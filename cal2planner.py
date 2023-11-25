@@ -16,15 +16,6 @@ from fitz.utils import getColor
 import win32com.client
 
 
-def get_date(datestr):
-    # tz = datetime.datetime.now().astimezone().tzinfo
-    try:  # py3
-        adate = datetime.datetime.fromtimestamp(datestr.Start.timestamp())
-    except Exception:
-        adate = datetime.datetime.fromtimestamp(int(datestr.Start))
-    return adate
-
-
 def send_mail(to, subject, body, attachment_name):
     outlook = win32com.client.Dispatch('outlook.application')
     mail = outlook.CreateItem(0)
@@ -40,34 +31,33 @@ def send_mail(to, subject, body, attachment_name):
     mail.Send()
 
 
-def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
+def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
     """
     Returns calender entries for x days default is 1
     Returns list of events
     """
     event = namedtuple('event', 'Start Subject Duration')
-    DATE_FORMAT = '%m/%d/%Y'
-    Outlook = win32com.client.Dispatch('Outlook.Application')
-    ns = Outlook.GetNamespace('MAPI')
+    date_format = '%m/%d/%Y'
+    outlook = win32com.client.Dispatch('Outlook.Application')
+    ns = outlook.GetNamespace('MAPI')
     appointments = ns.GetDefaultFolder(9).Items
     appointments.Sort('[Start]')
     appointments.IncludeRecurrences = True
-    begin_string = begin_date.strftime(DATE_FORMAT)
+    begin_string = begin_date.strftime(date_format)
     end = datetime.timedelta(days=days) + begin_date
-    end_string = end.date().strftime(DATE_FORMAT)
+    end_string = end.date().strftime(date_format)
     appointments = appointments.Restrict(
         "[Start] >= '" + begin_string + "' AND [End] <= '" + end_string + "'"
     )
-    events = []
+    appt_list = []
     for a in appointments:
-        # adate = get_date(a)
         if a.IsRecurring:
             a.Subject = a.Subject + ' (Recurring)'
-        events.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
-    return events
+        appt_list.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
+    return appt_list
 
 
-def GetSingleDayEvents(all_events, date_str):
+def get_single_day_events(all_events, date_str):
     date = datetime.datetime.strptime(date_str, '%m/%d/%Y')
     event_list = []
     for event in all_events:
@@ -96,24 +86,24 @@ def GetSingleDayEvents(all_events, date_str):
 
 def events2pdf(date2update, event_list):
     new_doc = False  # indicator if anything found at all
-    day2process_week = str(day2process.isocalendar()[1])
-    day2process_month = calendar.month_name[day2process.month]
-    day2process_dayname = day2process.strftime('%A')
-    day2process_daynumber = str(day2process.day)
+    date2update_week = str(date2update.isocalendar()[1])
+    date2update_month = calendar.month_name[date2update.month]
+    date2update_dayname = date2update.strftime('%A')
+    date2update_daynumber = str(date2update.day)
 
     # Define the text to search for
     text_to_search = (
-        day2process_month
+        date2update_month
         + '\n'
         + 'Week '
-        + day2process_week
+        + date2update_week
         + '\n'
-        + day2process_dayname
+        + date2update_dayname
         + ', '
-        + day2process_daynumber
+        + date2update_daynumber
     )
 
-    for page in input_file:  # scan through the pages
+    for page in pdf_file:  # scan through the pages
         locations = None
         locations = page.search_for(text_to_search)
         all_annots = page.annots()
@@ -130,8 +120,8 @@ def events2pdf(date2update, event_list):
             events2pdf = ''
             box1 = fitz.Rect(schedule_location[0] + (0, 15, 135, 480))
             """
-            We use a Shape object (something like a canvas) to output the text
-            and the rectangles surrounding it for demonstration.
+            We use a Shape object (something like a canvas) to output the text and the
+            rectangles surrounding it for demonstration.
             """
             shape1 = page.new_shape()  # create Shape
             shape1.draw_rect(box1)  # draw rectangles
@@ -158,8 +148,8 @@ def events2pdf(date2update, event_list):
 
             box3 = fitz.Rect(schedule_location[0] + (0, 35, 135, 480))
             """
-            We use a Shape object (something like a canvas) to output the text
-            and the rectangles surrounding it for demonstration.
+            Use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it.
             """
             shape3 = page.new_shape()  # create Shape
             shape3.draw_rect(box3)  # draw rectangles
@@ -179,49 +169,50 @@ def events2pdf(date2update, event_list):
             return new_doc
 
 
-total_days_to_process = 7
-mail_to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>'
-event = namedtuple('event', 'Start Subject Duration')
+# begin main code processing
+if __name__ == '__main__':
+    scriptpath = os.path.dirname(os.path.realpath(__file__))
+    scriptname = os.path.split(os.path.realpath(__file__))[1]
+    total_days_to_process = 7
+    mail_to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>'
 
-root = tkinter.Tk()
-root.withdraw()
+    root = tkinter.Tk()
+    root.withdraw()
+    input_pdf_filename = filedialog.askopenfilename(
+        initialdir=scriptpath, filetypes=[('PDF files', '*.pdf')]
+    )
 
-scriptpath = os.path.dirname(os.path.realpath(__file__))
-scriptname = os.path.split(os.path.realpath(__file__))[1]
-input_file_name = filedialog.askopenfilename(
-    initialdir=scriptpath, filetypes=[('PDF files', '*.pdf')]
-)
-split_filename = os.path.split(input_file_name)
-input_file = fitz.open(input_file_name)
+    pdf_file = fitz.open(input_pdf_filename)
+    i = 0
+    while i <= total_days_to_process - 1:
+        day2process = datetime.timedelta(days=i) + datetime.datetime.now()
+        date_str = day2process.strftime('%m/%d/%Y')
+        events = get_calendar_entries(day2process, total_days_to_process)
+        event_list = get_single_day_events(events, date_str)
 
+        if len(event_list) >= 1:
+            new_doc = events2pdf(day2process, event_list)
+        i += 1
 
-i = 0
-while i <= total_days_to_process - 1:
-    day2process = datetime.timedelta(days=i) + datetime.datetime.now()
-    events = getCalendarEntries(day2process, total_days_to_process)
-    date_str = day2process.strftime('%m/%d/%Y')
-    event_list = GetSingleDayEvents(events, date_str)
-
-    if len(event_list) >= 1:
-        new_doc = events2pdf(day2process, event_list)
-    else:
-        print('No outlook events for %s. skipping...' % date_str)
-    i += 1
-
-# links2pdf(input_file,jsonfile_links)
-
-dashed_date_str = day2process.strftime('%m%d%Y-%I%M%p')
-outputfile = split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
-if new_doc:
-    input_file.save(split_filename[0] + '\\' + outputfile)
-    attachment_filename = split_filename[0] + '\\' + outputfile
-    if messagebox.askyesno(
-        title=scriptname,
-        message='Send updated pdf:\n\n' + outputfile + '\n\nas email attachment?',
-    ):
-        send_mail(
-            to=mail_to,
-            subject=scriptname,
-            body=outputfile,
-            attachment_name=attachment_filename,
-        )
+    dashed_date_str = day2process.strftime('%m%d%Y-%I%M%p')
+    split_filename = os.path.split(input_pdf_filename)
+    output_pdf_filename = (
+        split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
+    )
+    if new_doc:
+        print('Saving updated pdf: ' + split_filename[0] + '\\' + output_pdf_filename)
+        pdf_file.save(split_filename[0] + '\\' + output_pdf_filename)
+        pdf_file.close()
+        attachment_filename = split_filename[0] + '\\' + output_pdf_filename
+        if messagebox.askyesno(
+            title=scriptname,
+            message='Send updated pdf:\n\n'
+            + output_pdf_filename
+            + '\n\nas email attachment?',
+        ):
+            send_mail(
+                to=mail_to,
+                subject=scriptname,
+                body=output_pdf_filename,
+                attachment_name=attachment_filename,
+            )
