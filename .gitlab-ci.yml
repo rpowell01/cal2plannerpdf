@@ -19,7 +19,7 @@ variables:
   environment:
     name: dev
   variables: {}
-  image: 3-windowsservercore
+  image: 3-windowsservercore-1809
   rules:
     - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME != 'main'
   before_script:
@@ -54,7 +54,7 @@ variables:
   environment:
     name: dev
   variables: {}
-  image: 3-windowsservercore
+  image: 3-windowsservercore-1809
   rules:
     - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME != 'main'
   before_script:
@@ -75,7 +75,7 @@ variables:
   environment:
     name: prod
   variables: {}
-  image: 3-windowsservercore
+  image: 3-windowsservercore-1809
   rules:
     - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME == 'main'
   before_script:
@@ -94,7 +94,7 @@ variables:
   stage: dev-execute-on-web-or-scheduled
   environment:
     name: dev
-  image: 3-windowsservercore
+  image: 3-windowsservercore-1809
   rules:
     - if: ($CI_PIPELINE_SOURCE == 'schedule' || $CI_PIPELINE_SOURCE == 'web')
   before_script:
@@ -113,7 +113,7 @@ variables:
   stage: prod-execute-on-web-or-scheduled
   environment:
     name: prod
-  image: 3-windowsservercore
+  image: 3-windowsservercore-1809
   rules:
     - if: ($CI_PIPELINE_SOURCE == 'schedule' || $CI_PIPELINE_SOURCE == 'web')
   before_script:
