@@ -1,4 +1,3 @@
 PyMuPDF
 pypiwin32
-pytz
 jsonpickle
