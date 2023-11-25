@@ -1,25 +1,20 @@
-# Import the fitz library
-import fitz
+import datetime
+import calendar
+import os
+import textwrap
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import messagebox
+# import json
 import jsonpickle
+from collections import namedtuple
 
+# Import the fitz library for PyMuPDF
+import fitz
+from fitz.utils import getColor
+
+# library to access outlook client
 import win32com.client
-import datetime, pytz, locale, calendar, os, textwrap, csv, json
-from collections import namedtuple
-
-
-event = namedtuple("event", "Start Subject Duration")
-
-# set the timezone to US/Pacific
-# timezone = pytz.timezone('US/Central')
-# datetime.datetime.now(timezone)
-
-# # get the current time in the default timezone
-# now = datetime.datetime.now()
-# print(now)
-
-from collections import namedtuple
-
-
 
 
 def get_date(datestr):
@@ -30,6 +25,7 @@ def get_date(datestr):
         adate = datetime.datetime.fromtimestamp(int(datestr.Start))
     return adate
 
+
 def send_mail(to, subject, body, attachment_name):
     outlook = win32com.client.Dispatch('outlook.application')
     mail = outlook.CreateItem(0)
@@ -39,9 +35,9 @@ def send_mail(to, subject, body, attachment_name):
     # mail.HTMLBody = '<h2>HTML Message body</h2>' #this field is optional
 
     # To attach a file to the email (optional):
-    attachment  = attachment_name
+    attachment = attachment_name
     mail.Attachments.Add(attachment)
-
+    print("Sending email...")
     mail.Send()
 
 
@@ -57,8 +53,6 @@ def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
     appointments = ns.GetDefaultFolder(9).Items
     appointments.Sort("[Start]")
     appointments.IncludeRecurrences = True
-    # start_date = datetime.datetime.today()
-    # begin = start_date.date().strftime(DATE_FORMAT)
     begin_string = begin_date.strftime(DATE_FORMAT)
     end = datetime.timedelta(days=days) + begin_date
     end_string = end.date().strftime(DATE_FORMAT)
@@ -70,7 +64,6 @@ def getCalendarEntries(begin_date=datetime.datetime.today(), days=1):
         # adate = get_date(a)
         if a.IsRecurring:
             a.Subject = a.Subject + " (Recurring)"
-
         events.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
     return events
 
@@ -84,26 +77,21 @@ def GetSingleDayEvents(all_events, date_str):
             and event.Start.month == date.month
             and event.Start.day == date.day
         ):
-            wrapped_subject = textwrap.wrap( event.Subject,50,break_long_words=True)
+            wrapped_subject = textwrap.wrap(event.Subject, 50,
+                                            break_long_words=True)
             subject = "\n".join(wrapped_subject)
-            event_end = datetime.timedelta(minutes=event.Duration) + event.Start
+            event_end = datetime.timedelta(minutes=event.Duration) \
+                + event.Start
             event_end_str = event_end.strftime("%I:%M%p ")
             event_string = event.Start.strftime("%I:%M%p - ") \
                 + event_end_str + "\n" \
-                + subject  + "\n"
+                + subject + "\n"
             event_list.append(event_string)
-    return event_list
 
-def print_descr(annot,description):
-    red = (1, 0, 0)
-    blue = (0, 0, 1)
-    gold = (1, 1, 0)
-    green = (0, 1, 0)
+    if len(event_list) == 0:
+        event_list.append("No events")
+    return event_list
     
-    """Print a short description to the right of each annot rect."""
-    annot.parent.insert_text(
-        annot.rect.bl -2, "%s" % description, color=blue, fontsize=9, fontname="TiRo"
-    )
     
 def links2json(filename):
     all_links = []
@@ -118,65 +106,30 @@ def links2json(filename):
     # json_object = json.dumps(all_links, indent=4)
     with open(output_file, 'w', newline='') as myfile:
         myfile.write(json_object)
-    # writer = csv.writer(myFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    
-    # writer = csv.writer(myFile, delimiter=',')
-    # for row in all_links:
-    #     writer.writerow(row)
-    # myFile.close()
     return all_links
+    
     
 def json2links(filename):
     all_links = []
-    with open(filename, 'rU', newline='') as json_file: 
-        # all_links = list(csv.reader(csv_file, delimiter=",", quotechar='"')) 
-        # all_links = list(csv.reader(csv_file, delimiter=",")) 
-        # all_links = json.load(json_file)
+    with open(filename, 'rU', newline='') as json_file:
         json_str = json_file.read()
         all_links = jsonpickle.decode(json_str)
     json_file.close()
     return all_links
     
+    
 def links2pdf(input_file, all_links):
     page_counter = 0
     
     for page in input_file:  # scan through the pages
-        # current_links = page.get_links()
-        # for link in current_links:
-        #     page.delete_link(link)
         for link in all_links[page_counter]:
-            # test2 = link.replace("'","\"")
-            # test_dict = json.loads(test2)
-            # link["name"]=link["name"].replace("%20"," ")
             print(link)
-            page.delete_link(link)
-            link["xref"] = input_file.get_new_xref()
-            page.insert_link(link)
-            
         page_counter += 1
-
-def str_to_dict(string):
-    # remove the curly braces from the string
-    string = string.strip('{}')
- 
-    # split the string into key-value pairs
-    pairs = string.split(', ')
- 
-    # use a dictionary comprehension to create
-    # the dictionary, converting the values to
-    # integers and removing the quotes from the keys
-    return {key[1:-2]: int(value) for key, value in (pair.split(': ') for pair in pairs)}
-         
         
+
 def events2pdf(date2update, event_list):
 
     new_doc = False  # indicator if anything found at all
-
-    red = (1, 0, 0)
-    blue = (0, 0, 1)
-    gold = (1, 1, 0)
-    green = (0, 1, 0)
-
     day2process_week = str(day2process.isocalendar()[1])
     day2process_month = calendar.month_name[day2process.month]
     day2process_dayname = day2process.strftime("%A")
@@ -185,146 +138,122 @@ def events2pdf(date2update, event_list):
     # Define the text to search for
     text_to_search = (
         day2process_month + "\n"
-        + "Week " + day2process_week + "\n" 
+        + "Week " + day2process_week + "\n"
         + day2process_dayname + ", " + day2process_daynumber
     )
-    # print(
-    # "Searching for '%s' in document '%s'"
-    # % (text_to_search.replace("\n", " "), input_file.name)
-    # )
-    
+
     for page in input_file:  # scan through the pages
         locations = None
         locations = page.search_for(text_to_search)
+        all_annots = page.annots()
+        for annot in all_annots:
+            page.delete_annot(annot)
         if locations:
-            page_links = page.get_links()
             new_doc = True
-            print("Adding Outlook events to '%s' on page %i" % (text_to_search.replace("\n", " "), page.number + 1))
-            # for location in locations:
-            #     page.add_highlight_annot(location)  # underline
-            
-            displ = fitz.Rect(40, 0, 40, 0)    
+            print("Adding Outlook events to '%s' on page %i" %
+                  (text_to_search.replace("\n", " "), page.number + 1))
+
             schedule_location = page.search_for("Schedule")
-            nine_am_location = page.search_for("9 AM")
-            ten_am_location = page.search_for("10 AM")
-            eleven_am_location = page.search_for("11 AM")
-            twelve_pm_location =  page.search_for("12 PM")
-            one_pm_location =  page.search_for("1 PM")
-            two_pm_location =  page.search_for("2 PM")
-            three_pm_location =  page.search_for("3 PM")
-            four_pm_location =  page.search_for("4 PM")
-            five_pm_location =  page.search_for("5 PM")
-            six_pm_location =  page.search_for("6 PM")
-            seven_pm_location =  page.search_for("7 PM")
-            eight_pm_location =  page.search_for("8 PM")
+            events2pdf = ""
+            box1 = fitz.Rect(schedule_location[0] + (0, 15, 135, 480))
+            """
+            We use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it for demonstration.
+            """
+            shape1 = page.new_shape()  # create Shape
+            shape1.draw_rect(box1)  # draw rectangles
+            shape1.finish(width=0.3, color=getColor("red"),
+                          fill=getColor("white"))
+            shape1.commit()  # write all stuff to page /Contents
 
-            if two_pm_location:
-                text_insert_location = fitz.Rect(two_pm_location[1])
-
-                # page.insert_text(
-                #     text_insert_location.bl + (135, 0), events2pdf
-                # )
-                
-            events2pdf = "Outlook Events\n"
-            # text_9am = []
-            # text_10am = []
-            # text_11am = []
-            # text_12pm = []
-            # text_01pm = []
-            # text_02pm = []
-            # text_03pm = []
-            # text_04pm = []
-            # text_05pm = []
-            # text_06pm = []
-            # text_07pm = []
-            # text_08pm = []
+            box2 = fitz.Rect(schedule_location[0] + (0, 15, 135, 23))
+            """
+            We use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it for demonstration.
+            """
+            shape2 = page.new_shape()  # create Shape
+            shape2.draw_rect(box2)  # draw rectangles
+            shape2.finish(width=0.3, color=getColor("red"),
+                          fill=getColor("LightSteelBlue"))
+            # Now insert text in the rectangles. Font "Helvetica" will be used
+            # by default. A return code rc < 0 indicates insufficient space
+            # (not checked here).
+            rc = shape2.insert_textbox(box2, "Outlook Events",
+                                       color=getColor("blue"),
+                                       align=1,
+                                       fontsize=10.5)
+            shape2.commit()  # write all stuff to page /Contents
+            
+            box3 = fitz.Rect(schedule_location[0] + (0, 35, 135, 480))
+            """
+            We use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it for demonstration.
+            """
+            shape3 = page.new_shape()  # create Shape
+            shape3.draw_rect(box3)  # draw rectangles
+            shape3.finish(width=0.3,
+                          color=getColor("red"),
+                          fill=getColor("gainsboro"))
+            
+            # Now insert text in the rectangles. Font "Helvetica" will be used
+            # by default. A return code rc < 0 indicates insufficient space
+            # (not checked here).
             for event in event_list:
-                # if event.find("08:") > -1 or event.find("09:") > -1 and event.find("AM - ") > -1:
-                #     text_9am.append(event) 
-                # if event.find("10:") > -1 and event.find("AM - ") > -1:
-                #     text_10am.append(event) 
-                # if event.find("11:") > -1 and event.find("AM - ") > -1:
-                #     text_11am.append(event) 
-                # if event.find("12:") > -1 and event.find("PM - ") > -1:
-                #     text_12pm.append(event) 
-                # if event.find("01:") > -1 and event.find("PM - ") > -1:
-                #     text_01pm.append(event) 
-                # if event.find("02:") > -1 and event.find("PM - ") > -1:
-                #     text_02pm.append(event) 
-                # if event.find("03:") > -1 and event.find("PM - ") > -1:
-                #     text_03pm.append(event) 
-                # if event.find("04:") > -1 and event.find("PM - ") > -1:
-                #     text_04pm.append(event) 
-                # if event.find("05:") > -1 and event.find("PM - ") > -1:
-                #     text_05pm.append(event) 
-                # if event.find("06:") > -1 and event.find("PM - ") > -1:
-                #     text_06pm.append(event) 
-                # if event.find("07:") > -1 and event.find("PM - ") > -1:
-                #     text_07pm.append(event) 
-                # if event.find("08:") > -1 and event.find("PM - ") > -1:
-                #     text_08pm.append(event) 
                 events2pdf = events2pdf + event + "\n"
-            # page.insert_text(nine_am_location[0].tl + (25,6), text_9am, fontsize=9, fontname="TiRo")
-            # page.insert_text(ten_am_location[0].tl + (25,6), text_10am, fontsize=9, fontname="TiRo")
-            # page.insert_text(eleven_am_location[0].tl + (25.6), text_11am, fontsize=9, fontname="TiRo")
-            # page.insert_text(twelve_pm_location[0].tl + (25.6), text_12pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(one_pm_location[0].tl + (25.6), text_01pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(two_pm_location[0].tl + (25.6), text_02pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(three_pm_location[0].tl + (25.6), text_03pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(four_pm_location[0].tl + (25.6), text_04pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(five_pm_location[0].tl + (25.6), text_05pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(six_pm_location[0].tl + (25.6), text_06pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(seven_pm_location[0].tl + (25.6), text_07pm, fontsize=9, fontname="TiRo")
-            # page.insert_text(eight_pm_location[0].tl + (25.6), text_08pm, fontsize=9, fontname="TiRo")
-            # annot = page.add_freetext_annot(schedule_location[0] + (100, 160, 100, 160), events2pdf, fontsize=9, fontname="TiRo")
-            annot = page.insert_text(schedule_location[0].tl + (140, 165), events2pdf, color=blue, fontsize=10.5, fontname="TiRo")
-            # info = annot.info
-            # info["title"] = "Outlook Events"
-            # annot.parent.insert_text(
-            #     annot.rect.tl +(40,5), "%s" % "(Show Outlook Events)", color=blue, fontsize=9, fontname="TiRo"
-            #  )
-
-            # page.add_highlight_annot(page.search_for("(Show Outlook Events)"))  # underline
-            # text_loc = page.search_for("(Show Outlook Events)")
-            # annot.set_rect(text_loc[0]+ (-75,5, -75,5))
-            # annot.set_popup(schedule_location[0] + (75, 170, 75, 170))
-            # annot.set_info(info)
-            # annot.update()
-                
+            rc = shape3.insert_textbox(box3, events2pdf,
+                                       color=getColor("blue"),
+                                       fontsize=10.5)
+            if rc < 0:
+                print("Issuficiant space in schedule bax to add event list")
+            shape3.commit()  # write all stuff to page /Content
             return new_doc
 
 # generate links json from original planner file
-original_links = links2json("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.pdf")
+# original_links = links2json("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.pdf")
 
 # generate list of links from json file
-jsonfile_links = json2links("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.json")
+# jsonfile_links = json2links("sn_a5x.breadcrumb.lined.default.ampm.sun.dailycal.2023.json")
 
-# Open the input PDF file in read mode
-input_file_name = "input.pdf"
+
+total_days_to_process = 30
+mail_to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>'
+event = namedtuple("event", "Start Subject Duration")
+
+root = tk.Tk()
+root.withdraw()
+
+scriptpath = os.path.dirname(os.path.realpath(__file__))
+scriptname = os.path.split(os.path.realpath(__file__))[1]
+input_file_name = filedialog.askopenfilename(initialdir=scriptpath,
+                                             filetypes=[("PDF files",
+                                                         "*.pdf")])
+split_filename = os.path.split(input_file_name)
 input_file = fitz.open(input_file_name)
 
-i = 0
-while i <= 6:
-    day2process = datetime.timedelta(days=i) + datetime.datetime.now()
 
-    events = getCalendarEntries(day2process, 7)
-    # for event in events:
-    #     print(event)
-    date_str=day2process.strftime("%m/%d/%Y")
+i = 0
+while i <= total_days_to_process -1:
+    day2process = datetime.timedelta(days=i) + datetime.datetime.now()
+    events = getCalendarEntries(day2process, total_days_to_process)
+    date_str = day2process.strftime("%m/%d/%Y")
     event_list = GetSingleDayEvents(events, date_str)
-# today = datetime.datetime.strptime("11/14/2023", "%m/%d/%Y")
 
     if len(event_list) >= 1:
         new_doc = events2pdf(day2process, event_list)
     else:
         print("No outlook events for %s. skipping..." % date_str)
-        
     i += 1
 
-links2pdf(input_file,jsonfile_links)
+# links2pdf(input_file,jsonfile_links)
 
-
+dashed_date_str = day2process.strftime("%m%d%Y-%I%M%p")
+outputfile = split_filename[1].replace(".pdf", "")+"-"+dashed_date_str+".pdf"
 if new_doc:
-    input_file.save("marked-" + input_file.name)
-    attachment_filename = os.path.abspath("marked-" + input_file.name)
-    # send_mail(to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>', subject = 'My 2023 Planner',body = 'My 2023 Planner', attachment_name=attachment_filename)
+    input_file.save(split_filename[0]+"\\"+outputfile)
+    attachment_filename = split_filename[0]+"\\"+outputfile
+    if tk.messagebox.askyesno(title=scriptname, message="Send updated pdf:\n\n" +
+                              outputfile + "\n\nas email attachment?"):
+        send_mail(to=mail_to,
+                  subject=scriptname,
+                  body=outputfile,
+                  attachment_name=attachment_filename)
