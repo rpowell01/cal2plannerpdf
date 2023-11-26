@@ -3,7 +3,8 @@ import calendar
 import os
 import textwrap
 
-import tkinter
+import tkinter as tk
+import tkinter.font as tkFont
 from tkinter import filedialog
 from tkinter import messagebox
 from collections import namedtuple
@@ -138,7 +139,7 @@ def events2pdf(date2update, event_list):
             shape2.finish(
                 width=0.3, color=getColor('red'), fill=getColor('LightSteelBlue')
             )
-            # Now insert text in the rectangles. Font "Helvetica" will be used
+            # Now insert text in the rectangles. Font "Times" will be used
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
             rc = shape2.insert_textbox(
@@ -155,7 +156,7 @@ def events2pdf(date2update, event_list):
             shape3.draw_rect(box3)  # draw rectangles
             shape3.finish(width=0.3, color=getColor('red'), fill=getColor('gainsboro'))
 
-            # Now insert text in the rectangles. Font "Helvetica" will be used
+            # Now insert text in the rectangles. Font "Times" will be used
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
             for event in event_list:
@@ -169,15 +170,175 @@ def events2pdf(date2update, event_list):
             return new_doc
 
 
+class App:
+    def __init__(self, root):
+        # setting title
+        root.title('Cal2Planner')
+        # setting window size
+        width = 591
+        height = 412
+        screenwidth = root.winfo_screenwidth()
+        screenheight = root.winfo_screenheight()
+        alignstr = '%dx%d+%d+%d' % (
+            width,
+            height,
+            (screenwidth - width) / 2,
+            (screenheight - height) / 2,
+        )
+        root.geometry(alignstr)
+        root.resizable(width=False, height=False)
+
+        btn_select_inputfile = tk.Button(root)
+        btn_select_inputfile['bg'] = '#f0f0f0'
+        ft = tkFont.Font(family='Times', size=10)
+        btn_select_inputfile['font'] = ft
+        btn_select_inputfile['fg'] = '#000000'
+        btn_select_inputfile['justify'] = 'center'
+        btn_select_inputfile['text'] = 'Select Input File'
+        btn_select_inputfile.place(x=20, y=50, width=111, height=30)
+        btn_select_inputfile['command'] = self.btn_select_inputfile_command
+
+        lbl_input_filename = tk.Label(root)
+        lbl_input_filename['activebackground'] = '#f4f4f4'
+        ft = tkFont.Font(family='Times', size=10)
+        lbl_input_filename['font'] = ft
+        lbl_input_filename['fg'] = '#333333'
+        lbl_input_filename['justify'] = 'left'
+        lbl_input_filename['text'] = 'None'
+        lbl_input_filename['relief'] = 'sunken'
+        lbl_input_filename.place(x=150, y=50, width=414, height=34)
+
+        lbl_days2process = tk.Label(root)
+        ft = tkFont.Font(family='Times', size=10, weight='bold')
+        lbl_days2process['font'] = ft
+        lbl_days2process['fg'] = '#333333'
+        lbl_days2process['justify'] = 'left'
+        lbl_days2process['text'] = 'Number of Days to Process'
+        lbl_days2process.place(x=20, y=160, width=167, height=30)
+
+        tb_days2process = tk.Entry(root)
+        tb_days2process['borderwidth'] = '1px'
+        ft = tkFont.Font(family='Times', size=10)
+        tb_days2process['font'] = ft
+        tb_days2process['fg'] = '#333333'
+        tb_days2process['justify'] = 'center'
+        tb_days2process['text'] = '7'
+        # tb_days2process["relief"] = "sunken"
+        tb_days2process.place(x=180, y=160, width=68, height=30)
+        tb_days2process.insert(0, 7)
+        # tb_days2process.pack()
+
+        lbl_output_filename = tk.Label(root)
+        ft = tkFont.Font(family='Times', size=10, weight='bold')
+        lbl_output_filename['font'] = ft
+        lbl_output_filename['fg'] = '#333333'
+        lbl_output_filename['justify'] = 'left'
+        lbl_output_filename['text'] = 'Output File Name:'
+        lbl_output_filename.place(x=20, y=100, width=110, height=30)
+
+        tb_output_filename = tk.Entry(root)
+        tb_output_filename['borderwidth'] = '1px'
+        ft = tkFont.Font(family='Times', size=10)
+        tb_output_filename['font'] = ft
+        tb_output_filename['fg'] = '#333333'
+        tb_output_filename['justify'] = 'left'
+        tb_output_filename['text'] = 'None'
+        tb_output_filename.place(x=150, y=100, width=411, height=30)
+
+        cb_dailynotes = tk.Checkbutton(root)
+        ft = tkFont.Font(family='Times', size=10)
+        cb_dailynotes['font'] = ft
+        cb_dailynotes['fg'] = '#333333'
+        cb_dailynotes['justify'] = 'left'
+        cb_dailynotes['text'] = 'Add Events to Daily Notes'
+        cb_dailynotes.place(x=20, y=200, width=188, height=35)
+        cb_dailynotes['offvalue'] = '0'
+        cb_dailynotes['onvalue'] = '1'
+        cb_dailynotes['command'] = self.cb_dailynotes_command
+
+        cb_email = tk.Checkbutton(root)
+        ft = tkFont.Font(family='Times', size=10)
+        cb_email['font'] = ft
+        cb_email['fg'] = '#333333'
+        cb_email['justify'] = 'left'
+        cb_email['text'] = 'Send Output File as Email Attachment'
+        cb_email.place(x=32, y=240, width=224, height=35)
+        cb_email['offvalue'] = False
+        cb_email['onvalue'] = True
+        cb_email['command'] = self.cb_email_command
+
+        btn_start = tk.Button(root)
+        btn_start['bg'] = '#f0f0f0'
+        ft = tkFont.Font(family='Times', size=10)
+        btn_start['font'] = ft
+        btn_start['fg'] = '#000000'
+        btn_start['justify'] = 'center'
+        btn_start['text'] = 'Start'
+        btn_start.place(x=230, y=300, width=70, height=25)
+        btn_start['command'] = self.btn_start_command
+
+        btn_quit = tk.Button(root)
+        btn_quit['bg'] = '#f0f0f0'
+        ft = tkFont.Font(family='Times', size=10)
+        btn_quit['font'] = ft
+        btn_quit['fg'] = '#000000'
+        btn_quit['justify'] = 'center'
+        btn_quit['text'] = 'Quit'
+        btn_quit.place(x=320, y=300, width=70, height=25)
+        btn_quit['command'] = self.btn_quit_command
+
+        lbl_messagebox = tk.Label(root)
+        ft = tkFont.Font(family='Times', size=10)
+        lbl_messagebox['font'] = ft
+        lbl_messagebox['fg'] = '#333333'
+        lbl_messagebox['justify'] = 'left'
+        lbl_messagebox['text'] = 'Proccessing Details...'
+        lbl_messagebox['relief'] = 'sunken'
+        lbl_messagebox.place(x=20, y=340, width=547, height=61)
+
+    def update_mb(self, message_text):
+        current_text = tk._default_root.children['!label4']['text']
+        tk._default_root.children['!label4']['text'] = (
+            current_text + '\n' + message_text
+        )
+
+    def btn_select_inputfile_command(self):
+        self.update_mb(message_text='Gathering input file details...')
+        tk._default_root.children['!label']['text'] = filedialog.askopenfilename(
+            initialdir=scriptpath, filetypes=[('PDF files', '*.pdf')]
+        )
+
+    def cb_dailynotes_command(self):
+        print('command')
+
+    def cb_email_command(self):
+        print('command')
+
+    def btn_start_command(self):
+        self.update_mb(
+            message_text='Start button pressed," \
+                + " adding outlook events to selected pdf...'
+        )
+
+    def btn_quit_command(self):
+        self.update_mb(message_text='Quit Button Pressed, Exiting...')
+        exit()
+
+
 # begin main code processing
 if __name__ == '__main__':
     scriptpath = os.path.dirname(os.path.realpath(__file__))
     scriptname = os.path.split(os.path.realpath(__file__))[1]
+
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()
+
     total_days_to_process = 7
     mail_to = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>'
 
-    root = tkinter.Tk()
-    root.withdraw()
+    # root = tkinter.Tk()
+    # root.withdraw()
     input_pdf_filename = filedialog.askopenfilename(
         initialdir=scriptpath, filetypes=[('PDF files', '*.pdf')]
     )
