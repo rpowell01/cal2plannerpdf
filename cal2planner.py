@@ -86,6 +86,118 @@ def get_single_day_events(all_events, date_str):
     return event_list
 
 
+def events2notes(pdf_file, date2update, event_list):
+    new_doc = False  # indicator if anything found at all
+    date2update_week = str(date2update.isocalendar()[1])
+    date2update_month = calendar.month_name[date2update.month]
+    date2update_dayname = date2update.strftime('%A')
+    date2update_daynumber = str(date2update.day)
+    date2update_year = str(date2update.year)
+
+    # Define the text to search for
+    text_to_search = (
+        date2update_month
+        + '\n'
+        + 'Week '
+        + date2update_week
+        + '\n'
+        + date2update_dayname
+        + ', '
+        + date2update_daynumber
+        + '\n'
+        + 'Notes'
+    )
+
+    for page in pdf_file:  # scan through the pages
+        locations = None
+        locations = page.search_for(text_to_search)
+        if locations:
+            new_doc = True
+            app.update_mb(
+                message_text="Adding Outlook events to Notes page '%s' on page %i"
+                % (text_to_search.replace('\n', ' '), page.number + 1)
+            )
+            notes_location = page.search_for(date2update_year)
+            box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
+            """
+            We use a Shape object (something like a canvas) to output the text and the
+            rectangles surrounding it for demonstration.
+            """
+            shape1 = page.new_shape()  # create Shape
+            shape1.draw_rect(box1)  # draw rectangles
+            shape1.finish(width=0.3, color=getColor('red'), fill=getColor('white'))
+            shape1.commit()  # write all stuff to page /Contents
+
+            # box2 = fitz.Rect(notes_location[0] + (-10, 30, 135, 23))
+            box2 = box1 + (0, 0, 0, -649)
+            """
+            We use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it for demonstration.
+            """
+            shape2 = page.new_shape()  # create Shape
+            shape2.draw_rect(box2)  # draw rectangles
+            shape2.finish(
+                width=0.3, color=getColor('red'), fill=getColor('LightSteelBlue')
+            )
+            # Now insert text in the rectangles. Font "Times" will be used
+            # by default. A return code rc < 0 indicates insufficient space
+            # (not checked here).
+            if len(event_list) > 1:
+                event_header = 'Outlook Event Notes'
+            else:
+                event_header = 'Note Topics'
+            rc = shape2.insert_textbox(
+                box2,
+                event_header,
+                color=getColor('blue'),
+                align=1,
+                fontsize=10.5,
+            )
+            shape2.commit()  # write all stuff to page /Contents
+
+            # box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, 679))
+            box3 = box2 + (0, 20, 0, 649)
+            """
+            Use a Shape object (something like a canvas) to output the text
+            and the rectangles surrounding it.
+            """
+            shape3 = page.new_shape()  # create Shape
+            shape3.draw_rect(box3)  # draw rectangles
+            shape3.finish(width=0.3, color=getColor('red'), fill=getColor('gainsboro'))
+
+            # Now insert text in the rectangles. Font "Times" will be used
+            # by default. A return code rc < 0 indicates insufficient space
+            # (not checked here).
+            event_count = 0
+            for event in event_list:
+                if len(event_list) > 0:
+                    spacing = (679 - 46) / len(event_list)
+                else:
+                    spacing = 0
+                event_location = box3 + (0, event_count * spacing, 0, 0)
+                if len(event_list) > 1:
+                    rc = shape3.insert_textbox(
+                        event_location, event, color=getColor('blue'), fontsize=10.5
+                    )
+                    event_count += 1
+                    if rc < 0:
+                        app.update_mb(
+                            message_text='Insufficient space in schedule '
+                            'box to add event'
+                        )
+            shape3.commit()  # write all stuff to page /Content
+
+            line_shape = page.new_shape()
+            line_shape.draw_line(box1.tr + 2, box1.br + 2)
+            line_shape.finish(color=getColor('black'), fill=getColor('black'))
+            line_shape.commit()
+    return new_doc
+
+
+def distance(x, y):
+    return abs(x - y)
+
+
 def events2pdf(pdf_file, date2update, event_list):
     new_doc = False  # indicator if anything found at all
     date2update_week = str(date2update.isocalendar()[1])
@@ -109,6 +221,7 @@ def events2pdf(pdf_file, date2update, event_list):
         locations = None
         locations = page.search_for(text_to_search)
         all_annots = page.annots()
+
         for annot in all_annots:
             page.delete_annot(annot)
         if locations:
@@ -166,8 +279,29 @@ def events2pdf(pdf_file, date2update, event_list):
                 box3, events2pdf, color=getColor('blue'), fontsize=10.5
             )
             if rc < 0:
-                print('Insuficiant space in schedule bax to add event list')
+                app.update_mb(
+                    message_text='Insufficient space in schedule box to add event list'
+                )
             shape3.commit()  # write all stuff to page /Content
+            links = page.get_links()
+            notes_more_location = page.search_for('More')
+            link_count = 0
+            for link in links:
+                # search through all page links looking for an "approximate match" for
+                # existing "Notes | More" link location
+                if (
+                    distance(notes_more_location[0].x0, link['from'].x0) > 5
+                    and distance(notes_more_location[0].x1, link['from'].x1) > 5
+                    and distance(notes_more_location[0].y0, link['from'].y0) > 5
+                    and distance(notes_more_location[0].y1, link['from'].y1) > 5
+                ):
+                    link_count += 1
+                else:
+                    # Found it!
+                    new_link = links[link_count]
+                    new_link['from'] = box3
+                    page.insert_link(new_link)
+
             return new_doc
 
 
@@ -183,12 +317,14 @@ def start_processing(
         event_list = get_single_day_events(events, date_str)
 
         if len(event_list) >= 1:
-            new_doc = events2pdf(pdf_file, day2process, event_list)
+            events_added = events2pdf(pdf_file, day2process, event_list)
+            if add_to_notes:
+                notes_added = events2notes(pdf_file, day2process, event_list)
         i += 1
 
     split_filename = os.path.split(input_pdf_name)
 
-    if new_doc:
+    if events_added or notes_added:
         # print('Saving updated pdf: ' + split_filename[0] + '\\' + output_pdf_name)
         pdf_file.save(split_filename[0] + '\\' + output_pdf_name)
         app.update_mb(
