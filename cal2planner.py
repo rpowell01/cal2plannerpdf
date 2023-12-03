@@ -92,6 +92,7 @@ def events2notes(pdf_file, date2update, event_list):
     date2update_month = calendar.month_name[date2update.month]
     date2update_dayname = date2update.strftime('%A')
     date2update_daynumber = str(date2update.day)
+    date2update_year = str(date2update.year)
 
     # Define the text to search for
     text_to_search = (
@@ -116,9 +117,8 @@ def events2notes(pdf_file, date2update, event_list):
                 message_text="Adding Outlook events to Notes page '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
-            notes_location = page.search_for('2023')
-            notes2pdf = ''
-            box1 = fitz.Rect(notes_location[0] + (-10, 25, 135, 680))
+            notes_location = page.search_for(date2update_year)
+            box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
             """
             We use a Shape object (something like a canvas) to output the text and the
             rectangles surrounding it for demonstration.
@@ -129,7 +129,7 @@ def events2notes(pdf_file, date2update, event_list):
             shape1.commit()  # write all stuff to page /Contents
 
             # box2 = fitz.Rect(notes_location[0] + (-10, 30, 135, 23))
-            box2 = box1 + (0, 0, 0, 0)
+            box2 = box1 + (0, 0, 0, -649)
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -142,12 +142,21 @@ def events2notes(pdf_file, date2update, event_list):
             # Now insert text in the rectangles. Font "Times" will be used
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
+            if len(event_list) > 1:
+                event_header = 'Outlook Event Notes'
+            else:
+                event_header = 'Note Topics'
             rc = shape2.insert_textbox(
-                box2, 'Outlook Events', color=getColor('blue'), align=1, fontsize=10.5
+                box2,
+                event_header,
+                color=getColor('blue'),
+                align=1,
+                fontsize=10.5,
             )
             shape2.commit()  # write all stuff to page /Contents
 
-            box3 = fitz.Rect(notes_location[0] + (-10, 45, 135, 680))
+            # box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, 679))
+            box3 = box2 + (0, 20, 0, 649)
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
@@ -161,16 +170,32 @@ def events2notes(pdf_file, date2update, event_list):
             # (not checked here).
             event_count = 0
             for event in event_list:
-                notes2pdf = notes2pdf + event + '\n'
-                event_location = box3 + (0, event_count * 100, 0, 0)
-                rc = shape3.insert_textbox(
-                    event_location, event, color=getColor('blue'), fontsize=10.5
-                )
-                event_count += 1
-            if rc < 0:
-                print('Insuficiant space in schedule bax to add event list')
+                if len(event_list) > 0:
+                    spacing = (679 - 46) / len(event_list)
+                else:
+                    spacing = 0
+                event_location = box3 + (0, event_count * spacing, 0, 0)
+                if len(event_list) > 1:
+                    rc = shape3.insert_textbox(
+                        event_location, event, color=getColor('blue'), fontsize=10.5
+                    )
+                    event_count += 1
+                    if rc < 0:
+                        app.update_mb(
+                            message_text='Insufficient space in schedule '
+                            'box to add event'
+                        )
             shape3.commit()  # write all stuff to page /Content
+
+            line_shape = page.new_shape()
+            line_shape.draw_line(box1.tr + 2, box1.br + 2)
+            line_shape.finish(color=getColor('black'), fill=getColor('black'))
+            line_shape.commit()
     return new_doc
+
+
+def distance(x, y):
+    return abs(x - y)
 
 
 def events2pdf(pdf_file, date2update, event_list):
@@ -196,6 +221,7 @@ def events2pdf(pdf_file, date2update, event_list):
         locations = None
         locations = page.search_for(text_to_search)
         all_annots = page.annots()
+
         for annot in all_annots:
             page.delete_annot(annot)
         if locations:
@@ -253,8 +279,29 @@ def events2pdf(pdf_file, date2update, event_list):
                 box3, events2pdf, color=getColor('blue'), fontsize=10.5
             )
             if rc < 0:
-                print('Insuficiant space in schedule bax to add event list')
+                app.update_mb(
+                    message_text='Insufficient space in schedule box to add event list'
+                )
             shape3.commit()  # write all stuff to page /Content
+            links = page.get_links()
+            notes_more_location = page.search_for('More')
+            link_count = 0
+            for link in links:
+                # search through all page links looking for an "approximate match" for
+                # existing "Notes | More" link location
+                if (
+                    distance(notes_more_location[0].x0, link['from'].x0) > 5
+                    and distance(notes_more_location[0].x1, link['from'].x1) > 5
+                    and distance(notes_more_location[0].y0, link['from'].y0) > 5
+                    and distance(notes_more_location[0].y1, link['from'].y1) > 5
+                ):
+                    link_count += 1
+                else:
+                    # Found it!
+                    new_link = links[link_count]
+                    new_link['from'] = box3
+                    page.insert_link(new_link)
+
             return new_doc
 
 
