@@ -6,6 +6,7 @@ import textwrap
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import filedialog
+from tkcalendar import DateEntry
 
 # from tkinter import messagebox
 from collections import namedtuple
@@ -47,7 +48,7 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
     appointments.IncludeRecurrences = True
     begin_string = begin_date.strftime(date_format)
     end = datetime.timedelta(days=days) + begin_date
-    end_string = end.date().strftime(date_format)
+    end_string = end.strftime(date_format)
     appointments = appointments.Restrict(
         "[Start] >= '" + begin_string + "' AND [End] <= '" + end_string + "'"
     )
@@ -233,7 +234,7 @@ def events2pdf(pdf_file, date2update, event_list):
 
             schedule_location = page.search_for('Schedule')
             events2pdf = ''
-            box1 = fitz.Rect(schedule_location[0] + (0, 15, 135, 480))
+            box1 = fitz.Rect(schedule_location[0] + (0, 15, 130, 465))
             """
             We use a Shape object (something like a canvas) to output the text and the
             rectangles surrounding it for demonstration.
@@ -243,7 +244,7 @@ def events2pdf(pdf_file, date2update, event_list):
             shape1.finish(width=0.3, color=getColor('red'), fill=getColor('white'))
             shape1.commit()  # write all stuff to page /Contents
 
-            box2 = fitz.Rect(schedule_location[0] + (0, 15, 135, 23))
+            box2 = fitz.Rect(schedule_location[0] + (0, 15, 130, 23))
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -261,7 +262,7 @@ def events2pdf(pdf_file, date2update, event_list):
             )
             shape2.commit()  # write all stuff to page /Contents
 
-            box3 = fitz.Rect(schedule_location[0] + (0, 35, 135, 480))
+            box3 = fitz.Rect(schedule_location[0] + (0, 35, 130, 465))
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
@@ -311,7 +312,7 @@ def start_processing(
     pdf_file = fitz.open(input_pdf_name)
     i = 0
     while i <= total_days_to_process - 1:
-        day2process = datetime.timedelta(days=i) + datetime.datetime.now()
+        day2process = datetime.timedelta(days=i) + app.cal_start.get_date()
         date_str = day2process.strftime('%m/%d/%Y')
         events = get_calendar_entries(day2process, total_days_to_process)
         event_list = get_single_day_events(events, date_str)
@@ -325,7 +326,6 @@ def start_processing(
     split_filename = os.path.split(input_pdf_name)
 
     if events_added or notes_added:
-        # print('Saving updated pdf: ' + split_filename[0] + '\\' + output_pdf_name)
         pdf_file.save(split_filename[0] + '\\' + output_pdf_name)
         app.update_mb(
             message_text='Updated pdf saved: '
@@ -357,11 +357,10 @@ class App:
         self.lbl_input_filename['text'] = filedialog.askopenfilename(
             initialdir=SCRIPT_PATH, filetypes=[('PDF files', '*.pdf')]
         )
-        enddate = (
-            datetime.timedelta(days=int(self.tb_days2process.get()))
-            + datetime.datetime.now()
-        )
-        dashed_date_str = enddate.strftime('%m%d%Y-%I%M%p')
+        enddate = self.cal_end.get_date()
+        current_time = datetime.datetime.now()
+        current_time = current_time.strftime('%I%M%p')
+        dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
         split_filename = os.path.split(self.lbl_input_filename['text'])
         output_pdf_filename = (
             split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
@@ -371,17 +370,17 @@ class App:
         self.tb_output_filename.update()
         self.btn_start.config(state='normal')
 
-    def tb_days2process_changed(self):
+    def tb_days2process_changed(self, *args):
         if self.tb_output_filename['state'] == 'normal':
             self.update_mb(
                 message_text='Updating output filename due to change in number of days'
                 'to process value.'
             )
-            enddate = (
-                datetime.timedelta(days=int(self.tb_days2process.get()))
-                + datetime.datetime.now()
-            )
-            dashed_date_str = enddate.strftime('%m%d%Y-%I%M%p')
+            enddate = self.cal_end.get_date()
+            current_time = datetime.datetime.now()
+
+            current_time = current_time.strftime('%I%M%p')
+            dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
             split_filename = os.path.split(self.lbl_input_filename['text'])
             output_pdf_filename = (
                 split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
@@ -420,7 +419,10 @@ class App:
         start_processing(
             input_pdf_name=self.lbl_input_filename['text'],
             output_pdf_name=self.tb_output_filename.get(),
-            total_days_to_process=int(self.tb_days2process.get()),
+            total_days_to_process=(
+                self.cal_end.get_date() - self.cal_start.get_date()
+            ).days
+            + 1,
             add_to_notes=cb_dailynotes_value.get(),
             mail_to=self.tb_mailto.get(),
         )
@@ -466,28 +468,48 @@ class App:
         self.lbl_input_filename['relief'] = 'sunken'
         self.lbl_input_filename.place(x=150, y=30, width=414, height=34)
 
-        self.lbl_days2process = tk.Label(root)
+        self.lbl_cal_start = tk.Label(root)
         ft = tkFont.Font(family='Times', size=10, weight='bold')
-        self.lbl_days2process['font'] = ft
-        self.lbl_days2process['fg'] = '#333333'
-        self.lbl_days2process['justify'] = 'left'
-        self.lbl_days2process['text'] = 'Number of Days to Process'
-        self.lbl_days2process.place(x=15, y=80, width=167, height=30)
+        self.lbl_cal_start['font'] = ft
+        self.lbl_cal_start['fg'] = '#333333'
+        self.lbl_cal_start['justify'] = 'left'
+        self.lbl_cal_start['text'] = 'Start Date: '
+        self.lbl_cal_start.place(x=15, y=80, width=167, height=30)
 
-        self.tb_days2process = tk.Entry(
-            root,
-            textvariable=TOTAL_DAYS_TO_PROCESS,
-            validate='focusout',
-            validatecommand=self.tb_days2process_changed,
+        self.frame_cal_start = tk.Frame(root)
+        self.frame_cal_start.place(x=135, y=85)
+
+        self.cal_start = DateEntry(
+            self.frame_cal_start, selectmode='day', date_pattern='mm-dd-yyyy'
         )
-        self.tb_days2process['borderwidth'] = '1px'
-        ft = tkFont.Font(family='Times', size=10)
-        self.tb_days2process['font'] = ft
-        self.tb_days2process['fg'] = '#333333'
-        self.tb_days2process['justify'] = 'center'
-        self.tb_days2process['text'] = '7'
-        self.tb_days2process.place(x=180, y=80, width=68, height=30)
-        self.tb_days2process.insert(0, TOTAL_DAYS_TO_PROCESS)
+        self.cal_start.grid(row=1, column=1, padx=15)
+        self.cal_start.bind('<<DateEntrySelected>>', self.tb_days2process_changed)
+
+        self.lbl_cal_end = tk.Label(root)
+        ft = tkFont.Font(family='Times', size=10, weight='bold')
+        self.lbl_cal_end['font'] = ft
+        self.lbl_cal_end['fg'] = '#333333'
+        self.lbl_cal_end['justify'] = 'left'
+        self.lbl_cal_end['text'] = 'End Date: '
+        self.lbl_cal_end.place(x=245, y=80, width=167, height=30)
+
+        self.frame_cal_end = tk.Frame(root)
+        self.frame_cal_end.place(x=360, y=85)
+
+        initial_end_date = (
+            datetime.timedelta(days=int(TOTAL_DAYS_TO_PROCESS))
+            + datetime.datetime.now()
+        )
+        self.cal_end = DateEntry(
+            self.frame_cal_end,
+            selectmode='day',
+            year=initial_end_date.year,
+            month=initial_end_date.month,
+            day=initial_end_date.day,
+            date_pattern='mm-dd-yyyy',
+        )
+        self.cal_end.grid(row=1, column=1, padx=15)
+        self.cal_end.bind('<<DateEntrySelected>>', self.tb_days2process_changed)
 
         self.lbl_output_filename = tk.Label(root)
         ft = tkFont.Font(family='Times', size=10, weight='bold')
