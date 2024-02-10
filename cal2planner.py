@@ -113,6 +113,8 @@ def events2notes(pdf_file, date2update, event_list):
         locations = None
         locations = page.search_for(text_to_search)
         if locations:
+            # page_width = page.rect.width
+            # page_height = page.rect.height
             new_doc = True
             app.update_mb(
                 message_text="Adding Outlook events to Notes page '%s' on page %i"
@@ -120,6 +122,8 @@ def events2notes(pdf_file, date2update, event_list):
             )
             notes_location = page.search_for(date2update_year)
             box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
+            # 679
+            # box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, page_height))
             """
             We use a Shape object (something like a canvas) to output the text and the
             rectangles surrounding it for demonstration.
@@ -131,6 +135,7 @@ def events2notes(pdf_file, date2update, event_list):
 
             # box2 = fitz.Rect(notes_location[0] + (-10, 30, 135, 23))
             box2 = box1 + (0, 0, 0, -649)
+            # box2 = box1 + (0, 0, 0, page_height*-1)
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -158,6 +163,7 @@ def events2notes(pdf_file, date2update, event_list):
 
             # box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, 679))
             box3 = box2 + (0, 20, 0, 649)
+            # box3 = box2 + (0, 20, 0, page_height)
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
@@ -173,6 +179,7 @@ def events2notes(pdf_file, date2update, event_list):
             for event in event_list:
                 if len(event_list) > 0:
                     spacing = (679 - 46) / len(event_list)
+                    # spacing = (page_height - 46) / len(event_list)
                 else:
                     spacing = 0
                 event_location = box3 + (0, event_count * spacing, 0, 0)
@@ -219,6 +226,8 @@ def events2pdf(pdf_file, date2update, event_list):
     )
 
     for page in pdf_file:  # scan through the pages
+        page_width = page.rect.width
+        page_height = page.rect.height
         locations = None
         locations = page.search_for(text_to_search)
         all_annots = page.annots()
@@ -234,7 +243,10 @@ def events2pdf(pdf_file, date2update, event_list):
 
             schedule_location = page.search_for('Schedule')
             events2pdf = ''
-            box1 = fitz.Rect(schedule_location[0] + (0, 15, 130, 465))
+            # box1 = fitz.Rect(schedule_location[0] + (0, 15, 130, 465))
+            box1 = fitz.Rect(
+                schedule_location[0] + (0, 15, page_width * 0.23, page_height * 0.60)
+            )
             """
             We use a Shape object (something like a canvas) to output the text and the
             rectangles surrounding it for demonstration.
@@ -244,7 +256,7 @@ def events2pdf(pdf_file, date2update, event_list):
             shape1.finish(width=0.3, color=getColor('red'), fill=getColor('white'))
             shape1.commit()  # write all stuff to page /Contents
 
-            box2 = fitz.Rect(schedule_location[0] + (0, 15, 130, 23))
+            box2 = fitz.Rect(schedule_location[0] + (0, 15, page_width * 0.23, 23))
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -262,7 +274,9 @@ def events2pdf(pdf_file, date2update, event_list):
             )
             shape2.commit()  # write all stuff to page /Contents
 
-            box3 = fitz.Rect(schedule_location[0] + (0, 35, 130, 465))
+            box3 = fitz.Rect(
+                schedule_location[0] + (0, 35, page_width * 0.23, page_height * 0.60)
+            )
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
