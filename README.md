@@ -15,7 +15,8 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin http://gitlab.rplab.local:8001/home-lab/posh/cal2plannerpdf.git
+git remote remove origin # Only if you already have an 'origin' remote set
+git remote add origin https://github.com/rpowell01/cal2plannerpdf.git
 git branch -M main
 git push -uf origin main
 ```
@@ -65,6 +66,55 @@ Depending on what you are making, it can be a good idea to include screenshots o
 
 ## Installation
 Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+### Windows (PowerShell) — create & activate a Python virtual environment
+
+If you're on Windows and using PowerShell, you can create a project-local virtual environment, install the project's requirements, and activate the venv with the following steps.
+
+1. From the project root, run the included setup script to create the venv and install requirements (it will back up any existing `.venv` if you use -Force):
+
+```powershell
+# create venv and install requirements (no overwrite)
+.\scripts\setup-venv.ps1
+
+# force recreate and backup existing .venv
+.\scripts\setup-venv.ps1 -Force
+```
+
+2. Activate the venv in the current PowerShell session:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+# prompt should now show (venv) and you can run the project with:
+python cal2planner.py
+```
+
+Notes:
+- If PowerShell prevents running the activation script due to execution policy, you can run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` to allow activation for the current session.
+- The venv uses the newest Python found on your system (from common install locations or PATH). If you need a specific Python binary, run that directly: `C:\path\to\python.exe -m venv .venv`.
+
+## Helper scripts
+
+This project includes small helper scripts to simplify environment setup and CI.
+
+- `scripts/setup-venv.ps1`
+	- Creates a `.venv` virtual environment using the newest Python found on the system (or common Windows install locations).
+	- Use without arguments to create a venv if one does not already exist.
+	- Use `-Force` to back up any existing `.venv` to `.venv_backup_YYYYMMDD_HHMMSS` and recreate it.
+	- Upgrades `pip` inside the venv and installs packages from `requirements.txt` if present.
+	- Example:
+
+```powershell
+# create without overwriting
+.\scripts\setup-venv.ps1
+
+# force recreate and backup
+.\scripts\setup-venv.ps1 -Force
+```
+
+- `.github/workflows/setup-venv.yml`
+	- A minimal GitHub Actions workflow that runs on `windows-latest`, creates a venv using Python 3.12, and installs `requirements.txt`. It's intended as a simple CI helper to verify dependencies install on Windows.
+
 
 ## Usage
 Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
