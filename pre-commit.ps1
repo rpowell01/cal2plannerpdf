@@ -1,1 +1,1 @@
-pre-commit run --files ./cal2planner.py
+pre-commit run --all-files

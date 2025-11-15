@@ -1,0 +1,117 @@
+[
+  [
+    "2024-02-12T08:30:00+00:00",
+    "Product Technology Stand Up (Recurring)",
+    30
+  ],
+  [
+    "2024-02-12T12:00:00+00:00",
+    "Busy (Recurring)",
+    60
+  ],
+  [
+    "2024-02-13T00:00:00+00:00",
+    "lab.hostedsolutions.com certificate expires",
+    1440
+  ],
+  [
+    "2024-02-13T08:30:00+00:00",
+    "Azure Stack POC - Stand-Up (Recurring)",
+    30
+  ],
+  [
+    "2024-02-13T09:00:00+00:00",
+    "Project Phoenix - Azure Stack HCI 23H2 Deployment (Recurring)",
+    420
+  ],
+  [
+    "2024-02-13T09:00:00+00:00",
+    "Public Cloud Operational Cadence (Recurring)",
+    30
+  ],
+  [
+    "2024-02-13T10:00:00+00:00",
+    "Azure Stack Weekly Stand Up (Recurring)",
+    60
+  ],
+  [
+    "2024-02-13T12:00:00+00:00",
+    "Busy (Recurring)",
+    60
+  ],
+  [
+    "2024-02-13T13:30:00+00:00",
+    "Tech Review Meeting (Recurring)",
+    50
+  ],
+  [
+    "2024-02-14T08:30:00+00:00",
+    "Product Technology Stand Up (Recurring)",
+    30
+  ],
+  [
+    "2024-02-14T09:00:00+00:00",
+    "Project Phoenix - Azure Stack HCI 23H2 Deployment (Recurring)",
+    420
+  ],
+  [
+    "2024-02-14T12:00:00+00:00",
+    "Busy (Recurring)",
+    60
+  ],
+  [
+    "2024-02-14T14:00:00+00:00",
+    "Internal Cloud Cost Optimization meeting- Reoccuring (Recurring)",
+    30
+  ],
+  [
+    "2024-02-14T14:00:00+00:00",
+    "Product Tech and Management All Hands (Recurring)",
+    50
+  ],
+  [
+    "2024-02-15T08:30:00+00:00",
+    "Azure Stack POC - Stand-Up (Recurring)",
+    30
+  ],
+  [
+    "2024-02-15T10:00:00+00:00",
+    "Project Phoenix - Monitoring Discussion and Planning",
+    60
+  ],
+  [
+    "2024-02-15T12:00:00+00:00",
+    "Busy (Recurring)",
+    60
+  ],
+  [
+    "2024-02-15T13:00:00+00:00",
+    "Project Phoenix - GitOps, DevOps, Everything Ops? Kubernetes and More",
+    120
+  ],
+  [
+    "2024-02-15T13:30:00+00:00",
+    "Tech Review Meeting (Recurring)",
+    50
+  ],
+  [
+    "2024-02-16T09:00:00+00:00",
+    "Public Cloud Operational Cadence (Recurring)",
+    30
+  ],
+  [
+    "2024-02-16T10:00:00+00:00",
+    "TierPoint Spot Security Review",
+    45
+  ],
+  [
+    "2024-02-16T12:00:00+00:00",
+    "Busy (Recurring)",
+    60
+  ],
+  [
+    "2024-02-16T15:00:00+00:00",
+    "Show & Tell | PCS (Recurring)",
+    30
+  ]
+]

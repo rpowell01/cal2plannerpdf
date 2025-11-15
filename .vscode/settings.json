@@ -19,5 +19,6 @@
 		"titleBar.inactiveForeground": "#e7e7e799"
 	},
 	"peacock.remoteColor": "#c42efa",
-	"peacock.color": "#5e6c79"
+	"peacock.color": "#5e6c79",
+	"python.formatting.provider": "black"
 }

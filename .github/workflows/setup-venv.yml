@@ -1,0 +1,73 @@
+name: Setup venv (matrix)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  setup-venv:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python-version: ['3.12']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip (Linux/macOS)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache pip (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: C:\\Users\\runneradmin\\AppData\\Local\\pip\\Cache
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Create virtual environment
+        run: |
+          python -m venv .venv
+
+      - name: Upgrade pip and install requirements
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            .\.venv\Scripts\python -m pip install --upgrade pip
+            .\.venv\Scripts\python -m pip install -r requirements.txt
+          else
+            ./.venv/bin/python -m pip install --upgrade pip
+            ./.venv/bin/python -m pip install -r requirements.txt
+          fi
+
+      - name: List installed packages (short)
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            .\.venv\Scripts\python -m pip list --disable-pip-version-check --format=columns
+          else
+            ./.venv/bin/python -m pip list --disable-pip-version-check --format=columns
+          fi
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .\.venv\Scripts\python -c "import ast; ast.parse(open('cal2planner.py','r',encoding='utf-8').read()); print('cal2planner.py syntax OK')"
+
+      - name: Smoke test (non-Windows)
+        if: runner.os != 'Windows'
+        run: |
+          ./.venv/bin/python -c 'import ast; ast.parse(open("cal2planner.py","r",encoding="utf-8").read()); print("cal2planner.py syntax OK")'
