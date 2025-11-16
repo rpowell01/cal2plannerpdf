@@ -114,16 +114,16 @@ def events2notes(pdf_file, date2update, event_list):
         locations = page.search_for(text_to_search)
         if locations:
             # page_width = page.rect.width
-            # page_height = page.rect.height
+            page_height = page.rect.height
             new_doc = True
             app.update_mb(
                 message_text="Adding Outlook events to Notes page '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
             notes_location = page.search_for(date2update_year)
-            box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
+            # box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
             # 679
-            # box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, page_height))
+            box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, page_height - 80))
             """
             We use a Shape object (something like a canvas) to output the text and the
             rectangles surrounding it for demonstration.
@@ -133,9 +133,10 @@ def events2notes(pdf_file, date2update, event_list):
             shape1.finish(width=0.3, color=getColor('red'), fill=getColor('white'))
             shape1.commit()  # write all stuff to page /Contents
 
-            # box2 = fitz.Rect(notes_location[0] + (-10, 30, 135, 23))
-            box2 = box1 + (0, 0, 0, -649)
+            box2 = fitz.Rect(notes_location[0] + (-8, 22, 135, 33))
+            # box2 = box1 + (0, 0, 0, -649)
             # box2 = box1 + (0, 0, 0, page_height*-1)
+            # box2 = box1
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -157,13 +158,14 @@ def events2notes(pdf_file, date2update, event_list):
                 event_header,
                 color=getColor('blue'),
                 align=1,
-                fontsize=10.5,
+                fontsize=8.5,
             )
             shape2.commit()  # write all stuff to page /Contents
 
-            # box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, 679))
-            box3 = box2 + (0, 20, 0, 649)
+            box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, page_height - 80))
+            # box3 = box2 + (0, 20, 0, 649)
             # box3 = box2 + (0, 20, 0, page_height)
+            # box3 = box1
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
@@ -178,14 +180,15 @@ def events2notes(pdf_file, date2update, event_list):
             event_count = 0
             for event in event_list:
                 if len(event_list) > 0:
-                    spacing = (679 - 46) / len(event_list)
-                    # spacing = (page_height - 46) / len(event_list)
+                    # spacing = (679 - 46) / len(event_list)
+                    # spacing1 = (page_height - 46) / len(event_list)
+                    spacing = (box3.bottom_left.y - box3.top_left.y) / len(event_list)
                 else:
                     spacing = 0
                 event_location = box3 + (0, event_count * spacing, 0, 0)
                 if len(event_list) > 1:
                     rc = shape3.insert_textbox(
-                        event_location, event, color=getColor('blue'), fontsize=10.5
+                        event_location, event, color=getColor('blue'), fontsize=8.5
                     )
                     event_count += 1
                     if rc < 0:
@@ -234,6 +237,7 @@ def events2pdf(pdf_file, date2update, event_list):
 
         for annot in all_annots:
             page.delete_annot(annot)
+
         if locations:
             new_doc = True
             app.update_mb(
@@ -270,7 +274,7 @@ def events2pdf(pdf_file, date2update, event_list):
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
             rc = shape2.insert_textbox(
-                box2, 'Outlook Events', color=getColor('blue'), align=1, fontsize=10.5
+                box2, 'Outlook Events', color=getColor('blue'), align=1, fontsize=8.5
             )
             shape2.commit()  # write all stuff to page /Contents
 
@@ -291,7 +295,7 @@ def events2pdf(pdf_file, date2update, event_list):
             for event in event_list:
                 events2pdf = events2pdf + event + '\n'
             rc = shape3.insert_textbox(
-                box3, events2pdf, color=getColor('blue'), fontsize=10.5
+                box3, events2pdf, color=getColor('blue'), fontsize=8.5
             )
             if rc < 0:
                 app.update_mb(
@@ -316,13 +320,19 @@ def events2pdf(pdf_file, date2update, event_list):
                     new_link = links[link_count]
                     new_link['from'] = box3
                     page.insert_link(new_link)
-
             return new_doc
+        # else:
+        #     app.update_mb(
+        #         message_text="Search string '%s' not found on page %i"
+        #         % (text_to_search.replace('\n', ' '), page.number + 1)
+        #     )
 
 
 def start_processing(
     input_pdf_name, output_pdf_name, total_days_to_process, add_to_notes, mail_to
 ):
+    events_added = False
+    notes_added = False
     pdf_file = fitz.open(input_pdf_name)
     i = 0
     while i <= total_days_to_process - 1:
@@ -337,14 +347,19 @@ def start_processing(
                 notes_added = events2notes(pdf_file, day2process, event_list)
         i += 1
 
-    split_filename = os.path.split(input_pdf_name)
+    # split_filename = os.path.split(input_pdf_name)
 
     if events_added or notes_added:
-        pdf_file.save(split_filename[0] + '\\' + output_pdf_name)
+        # pdf_file.save(split_filename[0] + '\\' + output_pdf_name)
+        pdf_file.save(
+            output_pdf_name,
+            incremental=(input_pdf_name == output_pdf_name),
+            encryption=False,
+        )
         app.update_mb(
             message_text='Updated pdf saved: '
-            + split_filename[0]
-            + '\\'
+            # + split_filename[0]
+            # + '\\'
             + output_pdf_name
         )
         pdf_file.close()
@@ -354,7 +369,8 @@ def start_processing(
                 to=mail_to,
                 subject=SCRIPT_NAME,
                 body=output_pdf_name,
-                attachment_name=split_filename[0] + '\\' + output_pdf_name,
+                # attachment_name=split_filename[0] + '\\' + output_pdf_name,
+                attachment_name=output_pdf_name,
             )
     app.update_mb(message_text='Done')
 
@@ -377,7 +393,12 @@ class App:
         dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
         split_filename = os.path.split(self.lbl_input_filename['text'])
         output_pdf_filename = (
-            split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
+            split_filename[0]
+            + '/'
+            + split_filename[1].replace('.pdf', '')
+            + '-'
+            + dashed_date_str
+            + '.pdf'
         )
         self.tb_output_filename.config(state='normal')
         self.tb_output_filename.insert(0, output_pdf_filename)
