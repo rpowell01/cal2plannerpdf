@@ -392,21 +392,38 @@ class App:
         current_time = current_time.strftime('%I%M%p')
         dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
         split_filename = os.path.split(self.lbl_input_filename['text'])
-        output_pdf_filename = (
-            split_filename[0]
-            + '/'
-            + split_filename[1].replace('.pdf', '')
-            + '-'
-            + dashed_date_str
-            + '.pdf'
-        )
+        if cb_date2filename_value.get():
+            output_pdf_filename = (
+                split_filename[0]
+                + '/'
+                + split_filename[1].replace('.pdf', '')
+                + '-'
+                + dashed_date_str
+                + '.pdf'
+            )
+        else:
+            output_pdf_filename = (
+                split_filename[0] + '/' + split_filename[1].replace('.pdf', '') + '.pdf'
+            )
+        # output_pdf_filename = (
+        #     split_filename[0]
+        #     + '/'
+        #     + split_filename[1].replace('.pdf', '')
+        #     + '-'
+        #     + dashed_date_str
+        #     + '.pdf'
+        # )
         self.tb_output_filename.config(state='normal')
         self.tb_output_filename.insert(0, output_pdf_filename)
         self.tb_output_filename.update()
+
         self.btn_start.config(state='normal')
 
     def tb_days2process_changed(self, *args):
-        if self.tb_output_filename['state'] == 'normal':
+        if (
+            self.tb_output_filename['state'] == 'normal'
+            and cb_date2filename_value.get() == 1
+        ):
             self.update_mb(
                 message_text='Updating output filename due to change in number of days'
                 'to process value.'
@@ -462,6 +479,39 @@ class App:
             mail_to=self.tb_mailto.get(),
         )
 
+    def cb_date2filename_command(self):
+        if cb_date2filename_value.get():
+            current_value = 'True'
+            enddate = self.cal_end.get_date()
+            current_time = datetime.datetime.now()
+            current_time = current_time.strftime('%I%M%p')
+            dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
+            split_filename = os.path.split(self.lbl_input_filename['text'])
+            output_pdf_filename = (
+                split_filename[0]
+                + '/'
+                + split_filename[1].replace('.pdf', '')
+                + '-'
+                + dashed_date_str
+                + '.pdf'
+            )
+            self.tb_output_filename.config(state='normal')
+            self.tb_output_filename.delete(0, tk.END)
+            self.tb_output_filename.insert(0, output_pdf_filename)
+            self.tb_output_filename.update()
+        else:
+            current_value = 'False'
+            split_filename = os.path.split(self.lbl_input_filename['text'])
+            output_pdf_filename = (
+                split_filename[0] + '/' + split_filename[1].replace('.pdf', '') + '.pdf'
+            )
+            self.tb_output_filename.config(state='normal')
+            self.tb_output_filename.delete(0, tk.END)
+            self.tb_output_filename.insert(0, output_pdf_filename)
+            self.tb_output_filename.update()
+
+        self.update_mb('Add date to Output File Name is ' + current_value)
+
     def btn_quit_command(self):
         self.update_mb(message_text='Quit Button Pressed, Exiting...')
         exit()
@@ -509,10 +559,10 @@ class App:
         self.lbl_cal_start['fg'] = '#333333'
         self.lbl_cal_start['justify'] = 'left'
         self.lbl_cal_start['text'] = 'Start Date: '
-        self.lbl_cal_start.place(x=15, y=80, width=167, height=30)
+        self.lbl_cal_start.place(x=15, y=70, width=167, height=30)
 
         self.frame_cal_start = tk.Frame(root)
-        self.frame_cal_start.place(x=135, y=85)
+        self.frame_cal_start.place(x=135, y=75)
 
         self.cal_start = DateEntry(
             self.frame_cal_start, selectmode='day', date_pattern='mm-dd-yyyy'
@@ -526,10 +576,10 @@ class App:
         self.lbl_cal_end['fg'] = '#333333'
         self.lbl_cal_end['justify'] = 'left'
         self.lbl_cal_end['text'] = 'End Date: '
-        self.lbl_cal_end.place(x=245, y=80, width=167, height=30)
+        self.lbl_cal_end.place(x=235, y=70, width=167, height=30)
 
         self.frame_cal_end = tk.Frame(root)
-        self.frame_cal_end.place(x=360, y=85)
+        self.frame_cal_end.place(x=340, y=75)
 
         initial_end_date = (
             datetime.timedelta(days=int(TOTAL_DAYS_TO_PROCESS))
@@ -546,13 +596,24 @@ class App:
         self.cal_end.grid(row=1, column=1, padx=15)
         self.cal_end.bind('<<DateEntrySelected>>', self.tb_days2process_changed)
 
+        self.cb_date2filename = tk.Checkbutton(root, variable=cb_date2filename_value)
+        ft = tkFont.Font(family='Times', size=10)
+        self.cb_date2filename['font'] = ft
+        self.cb_date2filename['fg'] = '#333333'
+        self.cb_date2filename['justify'] = 'left'
+        self.cb_date2filename['text'] = 'Add End Date/Time to Output File Name'
+        self.cb_date2filename.place(x=-25, y=105, width=340, height=35)
+        self.cb_date2filename['offvalue'] = '0'
+        self.cb_date2filename['onvalue'] = '1'
+        self.cb_date2filename['command'] = self.cb_date2filename_command
+
         self.lbl_output_filename = tk.Label(root)
         ft = tkFont.Font(family='Times', size=10, weight='bold')
         self.lbl_output_filename['font'] = ft
         self.lbl_output_filename['fg'] = '#333333'
         self.lbl_output_filename['justify'] = 'left'
         self.lbl_output_filename['text'] = 'Output File Name:'
-        self.lbl_output_filename.place(x=20, y=135, width=110, height=30)
+        self.lbl_output_filename.place(x=20, y=145, width=110, height=30)
 
         self.tb_output_filename = tk.Entry(root)
         self.tb_output_filename['borderwidth'] = '1px'
@@ -561,7 +622,7 @@ class App:
         self.tb_output_filename['fg'] = '#333333'
         self.tb_output_filename['justify'] = 'left'
         self.tb_output_filename['text'] = 'None'
-        self.tb_output_filename.place(x=150, y=135, width=411, height=30)
+        self.tb_output_filename.place(x=150, y=145, width=411, height=30)
         self.tb_output_filename.config(state='disabled')
 
         self.cb_dailynotes = tk.Checkbutton(root, variable=cb_dailynotes_value)
@@ -653,6 +714,7 @@ if __name__ == '__main__':
     SCRIPT_NAME = os.path.split(os.path.realpath(__file__))[1]
 
     root = tk.Tk()
+    cb_date2filename_value = tk.IntVar()
     cb_dailynotes_value = tk.IntVar()
     cb_email_value = tk.IntVar()
     TOTAL_DAYS_TO_PROCESS = tk.IntVar()
