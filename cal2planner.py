@@ -48,6 +48,7 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
     while retry_count < max_retries:
         try:
             outlook = win32com.client.Dispatch('Outlook.Application')
+            ns = outlook.GetNamespace('MAPI')
             break
         except Exception as e:
             app.update_mb(message_text='Error connecting to Outlook:' + str(e))
@@ -64,7 +65,6 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
         )
         # print("Failed to connect to Outlook after {max_retries} retries.")
     else:
-        ns = outlook.GetNamespace('MAPI')
         appointments = ns.GetDefaultFolder(9).Items
         appointments.Sort('[Start]')
         appointments.IncludeRecurrences = True
@@ -118,7 +118,7 @@ def events2notes(pdf_file, date2update, event_list):
     date2update_year = str(date2update.year)
 
     # Define the text to search for
-    text_to_search = (
+    text_to_search1 = (
         date2update_month
         + '\n'
         + 'Week '
@@ -131,9 +131,28 @@ def events2notes(pdf_file, date2update, event_list):
         + 'Notes'
     )
 
+    text_to_search2 = (
+        date2update_month[:3]
+        + '\n'
+        + 'Week '
+        + date2update_week
+        + '\n'
+        + date2update_dayname[:3]
+        + ', '
+        + date2update_daynumber
+        + '\n'
+        + 'Notes'
+    )
+
     for page in pdf_file:  # scan through the pages
         locations = None
-        locations = page.search_for(text_to_search)
+        locations = page.search_for(text_to_search1)
+        if locations:
+            text_to_search = text_to_search1
+        else:
+            text_to_search = text_to_search2
+            locations = page.search_for(text_to_search2)
+
         if locations:
             # page_width = page.rect.width
             page_height = page.rect.height
