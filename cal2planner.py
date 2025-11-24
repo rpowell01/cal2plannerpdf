@@ -2,6 +2,7 @@ import datetime
 import calendar
 import os
 import textwrap
+import time
 
 import tkinter as tk
 import tkinter.font as tkFont
@@ -39,25 +40,46 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
     Returns calender entries for x days default is 1
     Returns list of events
     """
+
     event = namedtuple('event', 'Start Subject Duration')
     date_format = '%m/%d/%Y'
-    outlook = win32com.client.Dispatch('Outlook.Application')
-    ns = outlook.GetNamespace('MAPI')
-    appointments = ns.GetDefaultFolder(9).Items
-    appointments.Sort('[Start]')
-    appointments.IncludeRecurrences = True
-    begin_string = begin_date.strftime(date_format)
-    end = datetime.timedelta(days=days) + begin_date
-    end_string = end.strftime(date_format)
-    appointments = appointments.Restrict(
-        "[Start] >= '" + begin_string + "' AND [End] <= '" + end_string + "'"
-    )
-    appt_list = []
-    for a in appointments:
-        if a.IsRecurring:
-            a.Subject = a.Subject + ' (Recurring)'
-        appt_list.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
-    return appt_list
+    max_retries = 3
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            outlook = win32com.client.Dispatch('Outlook.Application')
+            break
+        except Exception as e:
+            app.update_mb(message_text='Error connecting to Outlook:' + str(e))
+            # print(f"Error connecting to Outlook: {e}")
+            retry_count += 1
+            if retry_count < max_retries:
+                app.update_mb(message_text='Retrying in 5 seconds...')
+                # print(f"Retrying in 5 seconds...")
+                time.sleep(5)
+
+    if retry_count == max_retries:
+        app.update_mb(
+            message_text='Failed to connect to Outlook after {max_retries} retries.'
+        )
+        # print("Failed to connect to Outlook after {max_retries} retries.")
+    else:
+        ns = outlook.GetNamespace('MAPI')
+        appointments = ns.GetDefaultFolder(9).Items
+        appointments.Sort('[Start]')
+        appointments.IncludeRecurrences = True
+        begin_string = begin_date.strftime(date_format)
+        end = datetime.timedelta(days=days) + begin_date
+        end_string = end.strftime(date_format)
+        appointments = appointments.Restrict(
+            "[Start] >= '" + begin_string + "' AND [End] <= '" + end_string + "'"
+        )
+        appt_list = []
+        for a in appointments:
+            if a.IsRecurring:
+                a.Subject = a.Subject + ' (Recurring)'
+            appt_list.append(event(a.StartInStartTimeZone, a.Subject, a.Duration))
+        return appt_list
 
 
 def get_single_day_events(all_events, date_str):
@@ -228,28 +250,76 @@ def events2pdf(pdf_file, date2update, event_list):
         + date2update_daynumber
     )
 
+    # app.update_mb(
+    #     message_text="Searching pages for string '%s'"
+    #     % (text_to_search.replace("\n", " "))
+    # )
+
     for page in pdf_file:  # scan through the pages
-        page_width = page.rect.width
         page_height = page.rect.height
-        locations = None
-        locations = page.search_for(text_to_search)
+        page_text = page.get_text('text')
+
+        word_search = (
+            date2update_daynumber in page_text
+            and date2update_dayname in page_text
+            and date2update_month in page_text
+            and 'Week ' + date2update_week in page_text
+            and 'Schedule' in page_text
+            and 'Top priorities'
+        )
+        if word_search:
+            app.update_mb(
+                message_text="Planner schedule page found '%s' on page %i"
+                % (text_to_search.replace('\n', ' '), page.number + 1)
+            )
+            # text_dict = page.get_text("dict")
+
+            # for block in text_dict["blocks"]:
+            #     if block["type"] == 0: # Text block
+            #         for line in block["lines"]:
+            #             for span in line["spans"]:
+            #                 font_size = span["size"]
+            #                 font_name = span["font"]
+            #                 text_content = span["text"]
+            #                 print(f"Text: '{text_content}',
+            #                   Font: '{font_name}',
+            #                   Size: {font_size}"
+            #                   )
+
         all_annots = page.annots()
 
         for annot in all_annots:
             page.delete_annot(annot)
 
-        if locations:
+        if word_search:
             new_doc = True
             app.update_mb(
                 message_text="Adding Outlook events to '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
+            tp_loc = page.search_for('Top priorities')
+            sch_loc = page.search_for('Schedule')
+            sch_box_x1 = sch_loc[0].x1
+            tp_box_x0 = tp_loc[0].x0
 
-            schedule_location = page.search_for('Schedule')
+            # # Draw the horizontal line with tick marks
+            # start_x, start_y = 0, 20
+            # end_x = 500
+            # step = 20
+            # page.draw_line((start_x, start_y), (end_x, start_y))
+
+            # # Add tick marks and numeric labels every 10 units
+            # for x in range(start_x, end_x + 1, step):
+            #     # Draw a small vertical tick
+            #     page.draw_line((x, start_y - 5), (x, start_y + 5))
+
+            #     # Add text label below the line
+            #     page.insert_text((x - 5, start_y + 15), str(x - start_x),
+            #                     fontsize=8, fontname="helv")
+
             events2pdf = ''
-            # box1 = fitz.Rect(schedule_location[0] + (0, 15, 130, 465))
             box1 = fitz.Rect(
-                schedule_location[0] + (0, 15, page_width * 0.23, page_height * 0.60)
+                sch_loc[0] + (0, 15, (tp_box_x0) - (sch_box_x1) - 5, page_height * 0.60)
             )
             """
             We use a Shape object (something like a canvas) to output the text and the
@@ -260,7 +330,7 @@ def events2pdf(pdf_file, date2update, event_list):
             shape1.finish(width=0.3, color=getColor('red'), fill=getColor('white'))
             shape1.commit()  # write all stuff to page /Contents
 
-            box2 = fitz.Rect(schedule_location[0] + (0, 15, page_width * 0.23, 23))
+            box2 = fitz.Rect(sch_loc[0] + (0, 15, (tp_box_x0) - (sch_box_x1) - 5, 23))
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -274,12 +344,17 @@ def events2pdf(pdf_file, date2update, event_list):
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
             rc = shape2.insert_textbox(
-                box2, 'Outlook Events', color=getColor('blue'), align=1, fontsize=8.5
+                box2,
+                'Outlook Events',
+                color=getColor('blue'),
+                align=1,
+                fontsize=10,
+                fontname='tiro',
             )
             shape2.commit()  # write all stuff to page /Contents
 
             box3 = fitz.Rect(
-                schedule_location[0] + (0, 35, page_width * 0.23, page_height * 0.60)
+                sch_loc[0] + (0, 35, (tp_box_x0) - (sch_box_x1) - 5, page_height * 0.60)
             )
             """
             Use a Shape object (something like a canvas) to output the text
@@ -295,7 +370,7 @@ def events2pdf(pdf_file, date2update, event_list):
             for event in event_list:
                 events2pdf = events2pdf + event + '\n'
             rc = shape3.insert_textbox(
-                box3, events2pdf, color=getColor('blue'), fontsize=8.5
+                box3, events2pdf, color=getColor('blue'), fontsize=10, fontname='tiro'
             )
             if rc < 0:
                 app.update_mb(
@@ -347,21 +422,16 @@ def start_processing(
                 notes_added = events2notes(pdf_file, day2process, event_list)
         i += 1
 
-    # split_filename = os.path.split(input_pdf_name)
-
     if events_added or notes_added:
-        # pdf_file.save(split_filename[0] + '\\' + output_pdf_name)
         pdf_file.save(
             output_pdf_name,
             incremental=(input_pdf_name == output_pdf_name),
             encryption=False,
+            compression_effort=1,
+            deflate_fonts=True,
+            deflate_images=True,
         )
-        app.update_mb(
-            message_text='Updated pdf saved: '
-            # + split_filename[0]
-            # + '\\'
-            + output_pdf_name
-        )
+        app.update_mb(message_text='Updated pdf saved: ' + output_pdf_name)
         pdf_file.close()
 
         if mail_to:
@@ -369,9 +439,12 @@ def start_processing(
                 to=mail_to,
                 subject=SCRIPT_NAME,
                 body=output_pdf_name,
-                # attachment_name=split_filename[0] + '\\' + output_pdf_name,
                 attachment_name=output_pdf_name,
             )
+    else:
+        app.update_mb(message_text='No events found for selected date range')
+        pdf_file.close()
+
     app.update_mb(message_text='Done')
 
 
@@ -405,15 +478,9 @@ class App:
             output_pdf_filename = (
                 split_filename[0] + '/' + split_filename[1].replace('.pdf', '') + '.pdf'
             )
-        # output_pdf_filename = (
-        #     split_filename[0]
-        #     + '/'
-        #     + split_filename[1].replace('.pdf', '')
-        #     + '-'
-        #     + dashed_date_str
-        #     + '.pdf'
-        # )
+
         self.tb_output_filename.config(state='normal')
+        self.tb_output_filename.delete(0, tk.END)
         self.tb_output_filename.insert(0, output_pdf_filename)
         self.tb_output_filename.update()
 
@@ -424,10 +491,6 @@ class App:
             self.tb_output_filename['state'] == 'normal'
             and cb_date2filename_value.get() == 1
         ):
-            self.update_mb(
-                message_text='Updating output filename due to change in number of days'
-                'to process value.'
-            )
             enddate = self.cal_end.get_date()
             current_time = datetime.datetime.now()
 
@@ -435,11 +498,19 @@ class App:
             dashed_date_str = enddate.strftime('%m%d%Y-') + current_time
             split_filename = os.path.split(self.lbl_input_filename['text'])
             output_pdf_filename = (
-                split_filename[1].replace('.pdf', '') + '-' + dashed_date_str + '.pdf'
+                split_filename[0]
+                + '/'
+                + split_filename[1].replace('.pdf', '')
+                + '-'
+                + dashed_date_str
+                + '.pdf'
             )
             self.tb_output_filename.delete(0, tk.END)
             self.tb_output_filename.insert(0, output_pdf_filename)
             self.tb_output_filename.update()
+            self.update_mb(
+                message_text='Output Filename Changed: ' + output_pdf_filename
+            )
 
     def cb_dailynotes_command(self):
         if cb_dailynotes_value.get():
@@ -481,7 +552,7 @@ class App:
 
     def cb_date2filename_command(self):
         if cb_date2filename_value.get():
-            current_value = 'True'
+            # current_value = 'True'
             enddate = self.cal_end.get_date()
             current_time = datetime.datetime.now()
             current_time = current_time.strftime('%I%M%p')
@@ -500,7 +571,7 @@ class App:
             self.tb_output_filename.insert(0, output_pdf_filename)
             self.tb_output_filename.update()
         else:
-            current_value = 'False'
+            # current_value = 'False'
             split_filename = os.path.split(self.lbl_input_filename['text'])
             output_pdf_filename = (
                 split_filename[0] + '/' + split_filename[1].replace('.pdf', '') + '.pdf'
@@ -510,7 +581,7 @@ class App:
             self.tb_output_filename.insert(0, output_pdf_filename)
             self.tb_output_filename.update()
 
-        self.update_mb('Add date to Output File Name is ' + current_value)
+        self.update_mb('Output FileName Changed: ' + output_pdf_filename)
 
     def btn_quit_command(self):
         self.update_mb(message_text='Quit Button Pressed, Exiting...')
