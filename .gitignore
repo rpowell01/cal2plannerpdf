@@ -229,4 +229,4 @@ $RECYCLE.BIN/
 
 ./scripts/*
 ./get_outlook_events/*
-./work_code
+./work_code/**/*
