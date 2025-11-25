@@ -1,25 +1,28 @@
-# cal2planner
+# cal2plannerpdf
 
 ## Overview
 
-`cal2planner` is a Python script that retrieves calendar events / appointments from Outlook using the `win32com.client` and adds the retrieved events to a PDF based Planner file on the appropriate Daily Planner page for each of the event days retrieved.
+`cal2plannerpdf` is a Python script that retrieves calendar events / appointments from Outlook using the `win32com.client` and adds the calendar events to a PDF based Planner file on the appropriate Daily Planner page for each of the event days retrieved.
 
-The script creates a GUI front-end using the python tkinter library.  The GUI front-end allows you to:
+This script is specifically designed to augment the spectacular work done here:
+[kudrykv/latex-yearly-planner: Digital planner for Supernote and ReMarkable](https://github.com/kudrykv/latex-yearly-planner)
+
+The script creates a GUI front-end using the python tkinter libraryand allows you to:
 
 * Select the PDF Planner file to update
-* The begin and end date of calendar events to retrieve and embed in the PDF Planner File
+* Select the begin and end date of calendar events to retrieve
 * Define the output file name and wether or not it will be named based upon the end date selected
-* Optionally add the events retrieved to the `Notes` page associated with the Planner Day
+* Optionally add the events retrieved to the `Notes` page associated with the Daily Planner day
 * Optionally send updated PDF Planner file as an Email Attachment and define the email recipient address
 
 ![](assets/20251125_105217_image.png)
 
 ## Planner PDF File - Notes
 
-The script was created to specifically function against the PDF Planner files located at the following Link:
+The script was created to specifically work with the PDF Planner files located at the following Link:
 [pdf calendar download link](https://github.com/kudrykv/latex-yearly-planner/discussions/8)
 
-Shown below are some sample images of the updated `Daily Planner` page and the optionally updated linked `Notes` page for the Daily planner page:
+Shown below are some sample images of the updated `Daily Planner` page and the optionally updated linked Daily Planner `Notes` page:
 
 **Daily Planner**
 
@@ -39,7 +42,7 @@ The device that I am currently using is a `Boox Note Air 4c` and it works really
 
 ### Synchronzing the updated PDF Planner File
 
-Since the Boox Note Air 4c is an Android device at heart, I am able to utilize the `Syncthing` application installed on both the Windows machine and The Boox Note Air 4c tablet. The modifications to the planner PDF files are synchronized between devices nearly immediately after saving on either device.
+Since the Boox Note Air 4c is an Android device at heart, I am able to utilize the awesome `Syncthing` application installed on both the Windows machine and The Boox Note Air 4c tablet. The modifications to the planner PDF files are synchronized between devices nearly immediately after saving on either device.
 
 Again, when using the Kindle Scribe, I used the "Send-To-Kindle" functionality to get the modified file from the Windows device to the Kindle Device, but it was not without its problems (see above).
 
@@ -47,6 +50,7 @@ Again, when using the Kindle Scribe, I used the "Send-To-Kindle" functionality t
 
 Before running the script, make sure you have the following dependencies installed:
 
+- Microsoft Windows with the Micrsoft Outlook email client installed
 - Python 3.x
 - PyMuPDF
 - pypiwin32
@@ -56,19 +60,20 @@ Before running the script, make sure you have the following dependencies install
 
 To use the script, follow these steps:
 
-1. Optionally create and activate a python virtual environment.
-
-   ```
-   python -m venv .venv
-   .\.venv\Scripts\activate
-   ```
-2. Install the required dependencies ).
-
-   ```
-   pip3 install -r ./requirements.txt
-   ```
-3. Run the script with the following command:
+1. Clone the repository and change directory to the repository folder.
+2. Optionally create and activate a python virtual environment.
 
    ```shell
-   python cal2planner.py
+   python -m venv .venv
+   .\.venv\Scripts\activate.ps1
+   ```
+3. Install the required dependencies ).
+
+   ```shell
+   pip3 install -r ./requirements.txt
+   ```
+4. Run the script with the following command:
+
+   ```shell
+   python cal2plannerpdf.py
    ```
