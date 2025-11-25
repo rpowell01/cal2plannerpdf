@@ -15,7 +15,7 @@ The script creates a GUI front-end using the python tkinter libraryand allows yo
 * Optionally add the events retrieved to the `Notes` page associated with the Daily Planner day
 * Optionally send updated PDF Planner file as an Email Attachment and define the email recipient address
 
-![](assets/20251125_105217_image.png)
+![Updated Daily Planner page](assets/20251125_105217_image.png)
 
 ## Planner PDF File - Notes
 
@@ -24,13 +24,13 @@ The script was created to specifically work with the PDF Planner files located a
 
 Shown below are some sample images of the updated `Daily Planner` page and the optionally updated linked Daily Planner `Notes` page:
 
-**Daily Planner**
+Updated Daily Planner Page
 
-![](assets/20251125_113249_image.png)
+![Updated Daily Planner Page](assets/20251125_113249_image.png)
 
-**Notes**
+Updated Daly Planner Notes Page
 
-![](assets/20251125_113329_image.png)
+![Updated Daly Planner Notes Page](assets/20251125_113329_image.png)
 
 ## E-Reader Device - Notes
 
@@ -50,11 +50,11 @@ Again, when using the Kindle Scribe, I used the "Send-To-Kindle" functionality t
 
 Before running the script, make sure you have the following dependencies installed:
 
-- Microsoft Windows with the Micrsoft Outlook email client installed
-- Python 3.x
-- PyMuPDF
-- pypiwin32
-- tkcalendar
+* Microsoft Windows with the Micrsoft Outlook email client installed
+* Python 3.x
+* PyMuPDF
+* pypiwin32
+* tkcalendar
 
 ## Usage
 
@@ -67,11 +67,13 @@ To use the script, follow these steps:
    python -m venv .venv
    .\.venv\Scripts\activate.ps1
    ```
+
 3. Install the required dependencies ).
 
    ```shell
    pip3 install -r ./requirements.txt
    ```
+
 4. Run the script with the following command:
 
    ```shell

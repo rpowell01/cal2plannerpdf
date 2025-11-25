@@ -1,3 +1,1 @@
-PyMuPDF
-pypiwin32
-tkcalendar
+pre-commit
