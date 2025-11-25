@@ -1,5 +1,3 @@
 PyMuPDF
 pypiwin32
 tkcalendar
-fitz
-win32com
