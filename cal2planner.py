@@ -3,14 +3,12 @@ import calendar
 import os
 import textwrap
 import time
+from collections import namedtuple
 
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import filedialog
 from tkcalendar import DateEntry
-
-# from tkinter import messagebox
-from collections import namedtuple
 
 # Import the fitz library for PyMuPDF
 import fitz
@@ -52,18 +50,15 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
             break
         except Exception as e:
             app.update_mb(message_text='Error connecting to Outlook:' + str(e))
-            # print(f"Error connecting to Outlook: {e}")
             retry_count += 1
             if retry_count < max_retries:
                 app.update_mb(message_text='Retrying in 5 seconds...')
-                # print(f"Retrying in 5 seconds...")
                 time.sleep(5)
 
     if retry_count == max_retries:
         app.update_mb(
             message_text='Failed to connect to Outlook after {max_retries} retries.'
         )
-        # print("Failed to connect to Outlook after {max_retries} retries.")
     else:
         appointments = ns.GetDefaultFolder(9).Items
         appointments.Sort('[Start]')
@@ -154,7 +149,6 @@ def events2notes(pdf_file, date2update, event_list):
             locations = page.search_for(text_to_search2)
 
         if locations:
-            # page_width = page.rect.width
             page_height = page.rect.height
             new_doc = True
             app.update_mb(
@@ -162,8 +156,6 @@ def events2notes(pdf_file, date2update, event_list):
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
             notes_location = page.search_for(date2update_year)
-            # box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, 679))
-            # 679
             box1 = fitz.Rect(notes_location[0] + (-8, 22, 135, page_height - 80))
             """
             We use a Shape object (something like a canvas) to output the text and the
@@ -175,9 +167,6 @@ def events2notes(pdf_file, date2update, event_list):
             shape1.commit()  # write all stuff to page /Contents
 
             box2 = fitz.Rect(notes_location[0] + (-8, 22, 135, 33))
-            # box2 = box1 + (0, 0, 0, -649)
-            # box2 = box1 + (0, 0, 0, page_height*-1)
-            # box2 = box1
             """
             We use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it for demonstration.
@@ -204,9 +193,6 @@ def events2notes(pdf_file, date2update, event_list):
             shape2.commit()  # write all stuff to page /Contents
 
             box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, page_height - 80))
-            # box3 = box2 + (0, 20, 0, 649)
-            # box3 = box2 + (0, 20, 0, page_height)
-            # box3 = box1
             """
             Use a Shape object (something like a canvas) to output the text
             and the rectangles surrounding it.
@@ -221,8 +207,6 @@ def events2notes(pdf_file, date2update, event_list):
             event_count = 0
             for event in event_list:
                 if len(event_list) > 0:
-                    # spacing = (679 - 46) / len(event_list)
-                    # spacing1 = (page_height - 46) / len(event_list)
                     spacing = (box3.bottom_left.y - box3.top_left.y) / len(event_list)
                 else:
                     spacing = 0
@@ -269,11 +253,6 @@ def events2pdf(pdf_file, date2update, event_list):
         + date2update_daynumber
     )
 
-    # app.update_mb(
-    #     message_text="Searching pages for string '%s'"
-    #     % (text_to_search.replace("\n", " "))
-    # )
-
     for page in pdf_file:  # scan through the pages
         page_height = page.rect.height
         page_text = page.get_text('text')
@@ -291,24 +270,6 @@ def events2pdf(pdf_file, date2update, event_list):
                 message_text="Planner schedule page found '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
-            # text_dict = page.get_text("dict")
-
-            # for block in text_dict["blocks"]:
-            #     if block["type"] == 0: # Text block
-            #         for line in block["lines"]:
-            #             for span in line["spans"]:
-            #                 font_size = span["size"]
-            #                 font_name = span["font"]
-            #                 text_content = span["text"]
-            #                 print(f"Text: '{text_content}',
-            #                   Font: '{font_name}',
-            #                   Size: {font_size}"
-            #                   )
-
-        all_annots = page.annots()
-
-        for annot in all_annots:
-            page.delete_annot(annot)
 
         if word_search:
             new_doc = True
@@ -415,11 +376,6 @@ def events2pdf(pdf_file, date2update, event_list):
                     new_link['from'] = box3
                     page.insert_link(new_link)
             return new_doc
-        # else:
-        #     app.update_mb(
-        #         message_text="Search string '%s' not found on page %i"
-        #         % (text_to_search.replace('\n', ' '), page.number + 1)
-        #     )
 
 
 def start_processing(
@@ -571,7 +527,6 @@ class App:
 
     def cb_date2filename_command(self):
         if cb_date2filename_value.get():
-            # current_value = 'True'
             enddate = self.cal_end.get_date()
             current_time = datetime.datetime.now()
             current_time = current_time.strftime('%I%M%p')
@@ -590,7 +545,6 @@ class App:
             self.tb_output_filename.insert(0, output_pdf_filename)
             self.tb_output_filename.update()
         else:
-            # current_value = 'False'
             split_filename = os.path.split(self.lbl_input_filename['text'])
             output_pdf_filename = (
                 split_filename[0] + '/' + split_filename[1].replace('.pdf', '') + '.pdf'
@@ -810,7 +764,7 @@ if __name__ == '__main__':
     TOTAL_DAYS_TO_PROCESS = tk.IntVar()
     TOTAL_DAYS_TO_PROCESS = 7
     MAIL_TO = tk.StringVar()
-    MAIL_TO = 'Send-To-Kindle <rpowell0216_scribe@kindle.com>'
+    MAIL_TO = 'Send-To-Kindle <username@kindle.com>'
 
     app = App(root)
     root.mainloop()

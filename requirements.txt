@@ -1,9 +1,5 @@
 PyMuPDF
 pypiwin32
 tkcalendar
-# exchangelib
-icalendar
-recurring_ical_events
-arrow
-ics
-requests
+fitz
+win32com
