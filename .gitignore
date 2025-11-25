@@ -227,6 +227,4 @@ $RECYCLE.BIN/
 .venv/pyvenv.cfg
 .venv_backup_*
 
-./scripts/*
-./get_outlook_events/*
 ./work_code/**/*
