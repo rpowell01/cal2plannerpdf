@@ -14,6 +14,12 @@ The script creates a GUI front-end using the python tkinter libraryand allows yo
 * Define the output file name and wether or not it will be named based upon the end date selected
 * Optionally add the events retrieved to the `Notes` page associated with the Daily Planner day
 * Optionally send updated PDF Planner file as an Email Attachment and define the email recipient address
+New in v.1.1.0
+* Creates a settings.ini file containing relevant values selected within the GUI
+* settings.ini "numberofdays" calculated by difference between start and end date selected
+* Read and Imports relevent values from settings.ini if exists
+* --autostart parameter added which if supplied on command line automatically runs script using imported values from settings.ini
+* changed Pymupdf calls from shape.insert_textbox to page.insert_htmlbox for increased flexibilty
 
 ![Updated Daily Planner page](assets/20251125_105217_image.png)
 
