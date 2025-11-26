@@ -228,3 +228,5 @@ $RECYCLE.BIN/
 .venv_backup_*
 
 ./work_code/**/*
+settings.ini
+.vscode/*

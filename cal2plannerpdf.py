@@ -4,6 +4,8 @@ import os
 import textwrap
 import time
 from collections import namedtuple
+import configparser
+import argparse
 
 import tkinter as tk
 import tkinter.font as tkFont
@@ -18,7 +20,7 @@ from fitz.utils import getColor
 import win32com.client
 
 
-def send_mail(to, subject, body, attachment_name):
+def send_mail(self, to, subject, body, attachment_name):
     outlook = win32com.client.Dispatch('outlook.application')
     mail = outlook.CreateItem(0)
     mail.To = to
@@ -29,11 +31,11 @@ def send_mail(to, subject, body, attachment_name):
     # To attach a file to the email (optional):
     attachment = attachment_name
     mail.Attachments.Add(attachment)
-    app.update_mb(message_text='Sending email with updated pdf attached to:' + to)
+    self.update_mb(message_text='Sending email with updated pdf attached to:' + to)
     mail.Send()
 
 
-def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
+def get_calendar_entries(self, begin_date=datetime.datetime.today(), days=1):
     """
     Returns calender entries for x days default is 1
     Returns list of events
@@ -49,14 +51,14 @@ def get_calendar_entries(begin_date=datetime.datetime.today(), days=1):
             ns = outlook.GetNamespace('MAPI')
             break
         except Exception as e:
-            app.update_mb(message_text='Error connecting to Outlook:' + str(e))
+            self.update_mb(message_text='Error connecting to Outlook:' + str(e))
             retry_count += 1
             if retry_count < max_retries:
-                app.update_mb(message_text='Retrying in 5 seconds...')
+                self.update_mb(message_text='Retrying in 5 seconds...')
                 time.sleep(5)
 
     if retry_count == max_retries:
-        app.update_mb(
+        self.update_mb(
             message_text='Failed to connect to Outlook after {max_retries} retries.'
         )
     else:
@@ -104,7 +106,7 @@ def get_single_day_events(all_events, date_str):
     return event_list
 
 
-def events2notes(pdf_file, date2update, event_list):
+def events2notes(self, pdf_file, date2update, event_list):
     new_doc = False  # indicator if anything found at all
     date2update_week = str(date2update.isocalendar()[1])
     date2update_month = calendar.month_name[date2update.month]
@@ -151,7 +153,7 @@ def events2notes(pdf_file, date2update, event_list):
         if locations:
             page_height = page.rect.height
             new_doc = True
-            app.update_mb(
+            self.update_mb(
                 message_text="Adding Outlook events to Notes page '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
@@ -217,7 +219,7 @@ def events2notes(pdf_file, date2update, event_list):
                     )
                     event_count += 1
                     if rc < 0:
-                        app.update_mb(
+                        self.update_mb(
                             message_text='Insufficient space in schedule '
                             'box to add event'
                         )
@@ -234,7 +236,7 @@ def distance(x, y):
     return abs(x - y)
 
 
-def events2pdf(pdf_file, date2update, event_list):
+def events2pdf(self, pdf_file, date2update, event_list):
     new_doc = False  # indicator if anything found at all
     date2update_week = str(date2update.isocalendar()[1])
     date2update_month = calendar.month_name[date2update.month]
@@ -266,14 +268,14 @@ def events2pdf(pdf_file, date2update, event_list):
             and 'Top priorities'
         )
         if word_search:
-            app.update_mb(
+            self.update_mb(
                 message_text="Planner schedule page found '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
 
         if word_search:
             new_doc = True
-            app.update_mb(
+            self.update_mb(
                 message_text="Adding Outlook events to '%s' on page %i"
                 % (text_to_search.replace('\n', ' '), page.number + 1)
             )
@@ -353,7 +355,7 @@ def events2pdf(pdf_file, date2update, event_list):
                 box3, events2pdf, color=getColor('blue'), fontsize=10, fontname='tiro'
             )
             if rc < 0:
-                app.update_mb(
+                self.update_mb(
                     message_text='Insufficient space in schedule box to add event list'
                 )
             shape3.commit()  # write all stuff to page /Content
@@ -379,22 +381,22 @@ def events2pdf(pdf_file, date2update, event_list):
 
 
 def start_processing(
-    input_pdf_name, output_pdf_name, total_days_to_process, add_to_notes, mail_to
+    self, input_pdf_name, output_pdf_name, total_days_to_process, add_to_notes, mail_to
 ):
     events_added = False
     notes_added = False
     pdf_file = fitz.open(input_pdf_name)
     i = 0
     while i <= total_days_to_process - 1:
-        day2process = datetime.timedelta(days=i) + app.cal_start.get_date()
+        day2process = datetime.timedelta(days=i) + self.cal_start.get_date()
         date_str = day2process.strftime('%m/%d/%Y')
-        events = get_calendar_entries(day2process, total_days_to_process)
+        events = get_calendar_entries(self, day2process, total_days_to_process)
         event_list = get_single_day_events(events, date_str)
 
         if len(event_list) >= 1:
-            events_added = events2pdf(pdf_file, day2process, event_list)
+            events_added = events2pdf(self, pdf_file, day2process, event_list)
             if add_to_notes:
-                notes_added = events2notes(pdf_file, day2process, event_list)
+                notes_added = events2notes(self, pdf_file, day2process, event_list)
         i += 1
 
     if events_added or notes_added:
@@ -406,21 +408,22 @@ def start_processing(
             deflate_fonts=True,
             deflate_images=True,
         )
-        app.update_mb(message_text='Updated pdf saved: ' + output_pdf_name)
+        self.update_mb(message_text='Updated pdf saved: ' + output_pdf_name)
         pdf_file.close()
 
         if mail_to:
             send_mail(
+                self,
                 to=mail_to,
                 subject=SCRIPT_NAME,
                 body=output_pdf_name,
                 attachment_name=output_pdf_name,
             )
     else:
-        app.update_mb(message_text='No events found for selected date range')
+        self.update_mb(message_text='No events found for selected date range')
         pdf_file.close()
 
-    app.update_mb(message_text='Done')
+    self.update_mb(message_text='Done')
 
 
 class App:
@@ -464,6 +467,7 @@ class App:
     def tb_days2process_changed(self, *args):
         if (
             self.tb_output_filename['state'] == 'normal'
+            or self.tb_output_filename['state'] == 'disabled'
             and cb_date2filename_value.get() == 1
         ):
             enddate = self.cal_end.get_date()
@@ -480,12 +484,16 @@ class App:
                 + dashed_date_str
                 + '.pdf'
             )
-            self.tb_output_filename.delete(0, tk.END)
-            self.tb_output_filename.insert(0, output_pdf_filename)
-            self.tb_output_filename.update()
-            self.update_mb(
-                message_text='Output Filename Changed: ' + output_pdf_filename
-            )
+        else:
+            output_pdf_filename = self.lbl_input_filename['text']
+
+        self.tb_output_filename.config(state='normal')
+        self.tb_output_filename.delete(0, tk.END)
+        self.tb_output_filename.insert(0, output_pdf_filename)
+        self.tb_output_filename.update()
+        self.btn_start.config(state='normal')
+
+        self.update_mb(message_text='Output Filename Changed: ' + output_pdf_filename)
 
     def cb_dailynotes_command(self):
         if cb_dailynotes_value.get():
@@ -515,6 +523,7 @@ class App:
             message_text='Start button pressed, adding outlook events to selected pdf'
         )
         start_processing(
+            self,
             input_pdf_name=self.lbl_input_filename['text'],
             output_pdf_name=self.tb_output_filename.get(),
             total_days_to_process=(
@@ -557,7 +566,21 @@ class App:
         self.update_mb('Output FileName Changed: ' + output_pdf_filename)
 
     def btn_quit_command(self):
-        self.update_mb(message_text='Quit Button Pressed, Exiting...')
+        self.update_mb(message_text='Quit Button Pressed')
+        self.update_mb(message_text='Saving settings')
+        # Save the settings to a settings.ini file
+        config = configparser.ConfigParser()
+        config['Settings'] = {
+            'InputFilename': self.lbl_input_filename['text'],
+            'NumberofDays': (self.cal_end.get_date() - self.cal_start.get_date()).days,
+            'Date2Filename': cb_date2filename_value.get(),
+            'Dailynotes': cb_dailynotes_value.get(),
+            'Email': cb_email_value.get(),
+            'MailTo': self.tb_mailto.get(),
+        }
+        with open('settings.ini', 'w') as configfile:
+            config.write(configfile)
+        self.update_mb(message_text='Settings saved, Exiting...')
         exit()
 
     def __init__(self, root):
@@ -751,6 +774,58 @@ class App:
         # we need to have a vertical view
         self.sb_messagebox.config(command=self.lb_messagebox.yview)
 
+        # Reload the settings from the settings.ini file
+        config = configparser.ConfigParser()
+        if os.path.exists('settings.ini'):
+            self.update_mb(message_text='Importing settings.ini from last run...')
+            config.read('settings.ini')
+            self.lbl_input_filename['text'] = config['Settings']['InputFilename']
+            self.lbl_input_filename.update()
+            self.cal_end.set_date(
+                self.cal_start.get_date()
+                + datetime.timedelta(days=int(config['Settings']['NumberofDays']))
+            )
+            self.cal_end.update()
+            cb_date2filename_value.set(config['Settings']['Date2Filename'])
+            self.cb_date2filename.update()
+            self.tb_days2process_changed()
+            cb_dailynotes_value.set(config['Settings']['Dailynotes'])
+            self.cb_dailynotes.update()
+            cb_email_value.set(config['Settings']['Email'])
+            self.cb_email.update()
+            if cb_email_value.get() == 1:
+                self.tb_mailto.config(state='normal')
+                self.tb_mailto.delete(0, tk.END)
+                self.tb_mailto.insert(0, config['Settings']['MailTo'])
+                self.tb_mailto.update()
+
+            if args.autostart:
+                if os.path.exists('settings.ini'):
+                    self.update_mb(
+                        message_text=''
+                        + '--autostart parameter detected, starting processing...'
+                    )
+                    self.btn_start_command()
+                    self.update_mb(
+                        message_text=''
+                        + '--autostart parameter detected, exiting after processing.'
+                    )
+                    self.btn_quit_command()
+        else:
+            if args.autostart:
+                self.update_mb(
+                    message_text=''
+                    + '--autostart parameter detected but settings.ini not found'
+                    + ', cannot autostart processing.'
+                )
+                self.update_mb(
+                    message_text='You must manually define your'
+                    + ' settings on first run.'
+                )
+                self.update_mb(
+                    message_text='Settings will be saved after exiting' + ' first run'
+                )
+
 
 # begin main code processing
 if __name__ == '__main__':
@@ -765,6 +840,14 @@ if __name__ == '__main__':
     TOTAL_DAYS_TO_PROCESS = 7
     MAIL_TO = tk.StringVar()
     MAIL_TO = 'Send-To-Kindle <username@kindle.com>'
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--autostart',
+        action='store_true',
+        help='Automatically execute the btn_start_command() function',
+    )
+    args = parser.parse_args()
 
     app = App(root)
     root.mainloop()
