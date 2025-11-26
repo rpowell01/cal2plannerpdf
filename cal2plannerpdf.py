@@ -181,19 +181,20 @@ def events2notes(self, pdf_file, date2update, event_list):
             # Now insert text in the rectangles. Font "Times" will be used
             # by default. A return code rc < 0 indicates insufficient space
             # (not checked here).
+            css = '* {font-family: tiro;font-size:9px;color:blue}'
+
             if len(event_list) > 1:
                 event_header = 'Outlook Event Notes'
             else:
                 event_header = 'Note Topics'
-            rc = shape2.insert_textbox(
-                box2,
-                event_header,
-                color=getColor('blue'),
-                align=1,
-                fontsize=8.5,
-            )
             shape2.commit()  # write all stuff to page /Contents
-
+            rc = page.insert_htmlbox(
+                box2,
+                '<p style="text-align: center;">' + event_header + '</p>',
+                css=css,
+                scale_low=0,
+                overlay=True,
+            )
             box3 = fitz.Rect(notes_location[0] + (-8, 46, 135, page_height - 80))
             """
             Use a Shape object (something like a canvas) to output the text
@@ -202,6 +203,7 @@ def events2notes(self, pdf_file, date2update, event_list):
             shape3 = page.new_shape()  # create Shape
             shape3.draw_rect(box3)  # draw rectangles
             shape3.finish(width=0.3, color=getColor('red'), fill=getColor('gainsboro'))
+            shape3.commit()  # write all stuff to page /Contents
 
             # Now insert text in the rectangles. Font "Times" will be used
             # by default. A return code rc < 0 indicates insufficient space
@@ -214,16 +216,16 @@ def events2notes(self, pdf_file, date2update, event_list):
                     spacing = 0
                 event_location = box3 + (0, event_count * spacing, 0, 0)
                 if len(event_list) > 1:
-                    rc = shape3.insert_textbox(
-                        event_location, event, color=getColor('blue'), fontsize=8.5
+                    event2html = '<p style="text-align: left;">' + event + '</p>'
+                    rc = page.insert_htmlbox(
+                        event_location, event2html, css=css, scale_low=0, overlay=True
                     )
                     event_count += 1
-                    if rc < 0:
+                    if rc[0] < 0:
                         self.update_mb(
-                            message_text='Insufficient space in schedule '
+                            message_text='Insufficient space in notes '
                             'box to add event'
                         )
-            shape3.commit()  # write all stuff to page /Content
 
             line_shape = page.new_shape()
             line_shape.draw_line(box1.tr + 2, box1.br + 2)
@@ -322,18 +324,16 @@ def events2pdf(self, pdf_file, date2update, event_list):
             shape2.finish(
                 width=0.3, color=getColor('red'), fill=getColor('LightSteelBlue')
             )
-            # Now insert text in the rectangles. Font "Times" will be used
-            # by default. A return code rc < 0 indicates insufficient space
-            # (not checked here).
-            rc = shape2.insert_textbox(
-                box2,
-                'Outlook Events',
-                color=getColor('blue'),
-                align=1,
-                fontsize=10,
-                fontname='tiro',
-            )
+
+            css = '* {font-family: tiro;font-size:9px;color:blue}'
             shape2.commit()  # write all stuff to page /Contents
+            rc = page.insert_htmlbox(
+                box2,
+                '<p style="text-align: center;"><b>Outlook Events</b></p>',
+                css=css,
+                scale_low=0,
+                overlay=True,
+            )
 
             box3 = fitz.Rect(
                 sch_loc[0] + (0, 35, (tp_box_x0) - (sch_box_x1) - 5, page_height * 0.60)
@@ -345,20 +345,19 @@ def events2pdf(self, pdf_file, date2update, event_list):
             shape3 = page.new_shape()  # create Shape
             shape3.draw_rect(box3)  # draw rectangles
             shape3.finish(width=0.3, color=getColor('red'), fill=getColor('gainsboro'))
-
-            # Now insert text in the rectangles. Font "Times" will be used
-            # by default. A return code rc < 0 indicates insufficient space
-            # (not checked here).
+            shape3.commit()  # write all stuff to page /Content
             for event in event_list:
-                events2pdf = events2pdf + event + '\n'
-            rc = shape3.insert_textbox(
-                box3, events2pdf, color=getColor('blue'), fontsize=10, fontname='tiro'
+                events2pdf = (
+                    events2pdf + '<p style="text-align: left;">' + event + '</p>'
+                )
+            rc = page.insert_htmlbox(
+                box3, events2pdf, css=css, scale_low=0, overlay=True
             )
-            if rc < 0:
+            if rc[0] < 0:
                 self.update_mb(
                     message_text='Insufficient space in schedule box to add event list'
                 )
-            shape3.commit()  # write all stuff to page /Content
+
             links = page.get_links()
             notes_more_location = page.search_for('More')
             link_count = 0
