@@ -231,7 +231,7 @@ def events2notes(self, pdf_file, date2update, event_list):
 
             current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
             css = '* {font-family: tiro;font-size:8px;color:purple}'
-            planner_updated_location = box3 + (0, box3.bottom_left.y - 105, 0, 0)
+            planner_updated_location = box3 + (0, box3.bottom_left.y - 80, 0, 0)
             rc = page.insert_htmlbox(
                 planner_updated_location,
                 '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
@@ -372,7 +372,7 @@ def events2pdf(self, pdf_file, date2update, event_list):
                 )
             current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
             css = '* {font-family: tiro;font-size:8px;color:purple}'
-            planner_updated_location = box3 + (0, box3.bottom_left.y - 110, 0, 0)
+            planner_updated_location = box3 + (0, box3.bottom_left.y - 90, 0, 0)
             rc = page.insert_htmlbox(
                 planner_updated_location,
                 '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
