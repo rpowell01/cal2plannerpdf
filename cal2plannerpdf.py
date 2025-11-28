@@ -47,6 +47,7 @@ def get_calendar_entries(self, begin_date=datetime.datetime.today(), days=1):
     retry_count = 0
     while retry_count < max_retries:
         try:
+            self.update_mb(message_text='Connecting to Outlook...')
             outlook = win32com.client.Dispatch('Outlook.Application')
             ns = outlook.GetNamespace('MAPI')
             break
@@ -62,6 +63,7 @@ def get_calendar_entries(self, begin_date=datetime.datetime.today(), days=1):
             message_text='Failed to connect to Outlook after {max_retries} retries.'
         )
     else:
+        # https://documentation.help/OLFM10/rerefFindFolder.htm
         appointments = ns.GetDefaultFolder(9).Items
         appointments.Sort('[Start]')
         appointments.IncludeRecurrences = True
@@ -452,6 +454,10 @@ class App:
         self.lb_messagebox.yview_scroll(1, 'units')
         self.lb_messagebox.update()
 
+        # Write the message to the log file
+        with open(LOG_FILE_NAME, 'a', encoding='utf-8') as log_file:
+            log_file.write(f"{datetime.datetime.now()}\t{message_text}\n")
+
     def btn_select_inputfile_command(self):
         self.update_mb(message_text='Gathering input file details...')
         self.lbl_input_filename['text'] = filedialog.askopenfilename(
@@ -483,7 +489,7 @@ class App:
 
         self.btn_start.config(state='normal')
 
-    def tb_days2process_changed(self, *args):
+    def tb_days2process_changed(self):
         if (
             self.tb_output_filename['state'] == 'normal'
             or self.tb_output_filename['state'] == 'disabled'
@@ -597,9 +603,10 @@ class App:
             'Email': cb_email_value.get(),
             'MailTo': self.tb_mailto.get(),
         }
-        with open('settings.ini', 'w') as configfile:
+        with open('settings.ini', 'w', encoding='utf-8') as configfile:
             config.write(configfile)
-        self.update_mb(message_text='Settings saved, Exiting...')
+        self.update_mb(message_text='Settings saved')
+        self.update_mb(message_text='--- Application Exiting ---')
         exit()
 
     def __init__(self, root):
@@ -793,6 +800,8 @@ class App:
         # we need to have a vertical view
         self.sb_messagebox.config(command=self.lb_messagebox.yview)
 
+        self.update_mb(message_text='--- Application started ---')
+
         # Reload the settings from the settings.ini file
         config = configparser.ConfigParser()
         if os.path.exists('settings.ini'):
@@ -846,6 +855,15 @@ class App:
                 )
 
 
+def create_log_file(filename):
+    # Create the log file if it doesn't exist
+    if not os.path.exists(filename):
+        with open(filename, 'w', encoding='utf-8') as log_file:
+            log_file.write('cal2plannerpdfLog File\n')
+            log_file.write('-----------------------\n')
+            log_file.write('Date\tTime\tMessage\n')
+
+
 # begin main code processing
 if __name__ == '__main__':
     SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -859,6 +877,10 @@ if __name__ == '__main__':
     TOTAL_DAYS_TO_PROCESS = 7
     MAIL_TO = tk.StringVar()
     MAIL_TO = 'Send-To-Kindle <username@kindle.com>'
+
+    # Create the log file
+    LOG_FILE_NAME = 'cal2plannerpdf.log'
+    create_log_file(LOG_FILE_NAME)
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

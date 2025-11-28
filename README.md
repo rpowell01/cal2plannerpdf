@@ -25,6 +25,12 @@ The script creates a GUI front-end using the python tkinter libraryand allows yo
   New in v1.1.2
 * Add date/time to the bottom of each daily planner and notes page indicating when the cal2plannerpdf script was executed and PDF file was updated.
 
+  New in v1.2.0
+* text based application logging to cal2plannerpdf.log
+* added cal2plannerpdf-taskscheduler.ps1 powershell script which can be used to execute the script via the Windows Task Scheduler with the --autostart parameter.
+
+  * Note: when using windows task scheduler to execute the python script via a scheduled task, you must select the option "Run only when user is logged in".  This requirement is due to the fact that the python script needs to call / dispatch the outlook client in order to retrieve its calendar events. The outlook client requires a desktop environment and you only get a desktop environment for a logged in user.
+
 ![Updated Daily Planner page](assets/20251125_105217_image.png)
 
 ## Planner PDF File - Notes
