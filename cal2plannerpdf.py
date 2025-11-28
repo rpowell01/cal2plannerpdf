@@ -63,6 +63,10 @@ def get_calendar_entries(self, begin_date=datetime.datetime.today(), days=1):
             message_text='Failed to connect to Outlook after {max_retries} retries.'
         )
     else:
+        self.update_mb(
+            message_text='Getting calendar events for '
+            + begin_date.strftime(date_format)
+        )
         # https://documentation.help/OLFM10/rerefFindFolder.htm
         appointments = ns.GetDefaultFolder(9).Items
         appointments.Sort('[Start]')
@@ -108,6 +112,11 @@ def get_single_day_events(all_events, date_str):
     return event_list
 
 
+def get_quarter(date_obj):
+    """Calculates the quarter (1-4) from a datetime.date or datetime.datetime object."""
+    return (date_obj.month - 1) // 3 + 1
+
+
 def events2notes(self, pdf_file, date2update, event_list):
     new_doc = False  # indicator if anything found at all
     date2update_week = str(date2update.isocalendar()[1])
@@ -115,10 +124,15 @@ def events2notes(self, pdf_file, date2update, event_list):
     date2update_dayname = date2update.strftime('%A')
     date2update_daynumber = str(date2update.day)
     date2update_year = str(date2update.year)
+    date2update_quarter = 'Q' + str(get_quarter(date2update))
 
     # Define the text to search for
     text_to_search1 = (
-        date2update_month
+        date2update_year
+        + '\n'
+        + date2update_quarter
+        + '\n'
+        + date2update_month
         + '\n'
         + 'Week '
         + date2update_week
@@ -131,7 +145,11 @@ def events2notes(self, pdf_file, date2update, event_list):
     )
 
     text_to_search2 = (
-        date2update_month[:3]
+        date2update_year
+        + '\n'
+        + date2update_quarter
+        + '\n'
+        + date2update_month[:3]
         + '\n'
         + 'Week '
         + date2update_week
@@ -231,7 +249,13 @@ def events2notes(self, pdf_file, date2update, event_list):
 
             current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
             css = '* {font-family: tiro;font-size:8px;color:purple}'
-            planner_updated_location = box3 + (0, box3.bottom_left.y - 80, 0, 0)
+            # # planner_updated_location = box3 + (0, box3.bottom_left.y - 80, 0, 0)
+            # planner_updated_location = box3
+            # planner_updated_location.tl.y = planner_updated_location.bl.y + 10
+            # planner_updated_location.br.y = planner_updated_location.br.y + 10
+            planner_updated_location = fitz.Rect(
+                box3.bl.x, box3.bl.y - 5, box3.br.x, box3.br.y + 15
+            )
             rc = page.insert_htmlbox(
                 planner_updated_location,
                 '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
@@ -257,10 +281,21 @@ def events2pdf(self, pdf_file, date2update, event_list):
     date2update_month = calendar.month_name[date2update.month]
     date2update_dayname = date2update.strftime('%A')
     date2update_daynumber = str(date2update.day)
+    date2update_year = str(date2update.year)
+    date2update_quarter = 'Q' + str(get_quarter(date2update))
+
+    self.update_mb(
+        message_text='Searching for daily planner page for '
+        + date2update.strftime('%m/%d/%Y')
+    )
 
     # Define the text to search for
     text_to_search = (
-        date2update_month
+        date2update_year
+        + '\n'
+        + date2update_quarter
+        + '\n'
+        + date2update_month
         + '\n'
         + 'Week '
         + date2update_week
@@ -275,7 +310,9 @@ def events2pdf(self, pdf_file, date2update, event_list):
         page_text = page.get_text('text')
 
         word_search = (
-            date2update_daynumber in page_text
+            date2update_year in page_text
+            and date2update_quarter in page_text
+            and date2update_daynumber in page_text
             and date2update_dayname in page_text
             and date2update_month in page_text
             and 'Week ' + date2update_week in page_text
@@ -372,7 +409,9 @@ def events2pdf(self, pdf_file, date2update, event_list):
                 )
             current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
             css = '* {font-family: tiro;font-size:8px;color:purple}'
-            planner_updated_location = box3 + (0, box3.bottom_left.y - 90, 0, 0)
+            planner_updated_location = fitz.Rect(
+                box3.bl.x, box3.bl.y - 5, box3.br.x, box3.br.y + 15
+            )
             rc = page.insert_htmlbox(
                 planner_updated_location,
                 '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
@@ -441,7 +480,9 @@ def start_processing(
                 attachment_name=output_pdf_name,
             )
     else:
-        self.update_mb(message_text='No events found for selected date range')
+        self.update_mb(
+            message_text='No events added to output pdf ' + 'for selected date range'
+        )
         pdf_file.close()
 
     self.update_mb(message_text='Done')
