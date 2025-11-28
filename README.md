@@ -22,6 +22,9 @@ The script creates a GUI front-end using the python tkinter libraryand allows yo
 * --autostart parameter added which if supplied on command line automatically runs script using imported values from settings.ini
 * changed Pymupdf calls from shape.insert_textbox to page.insert_htmlbox for increased flexibilty
 
+  New in v1.1.2
+* Add date/time to the bottom of each daily planner and notes page indicating when the cal2plannerpdf script was executed and PDF file was updated.
+
 ![Updated Daily Planner page](assets/20251125_105217_image.png)
 
 ## Planner PDF File - Notes

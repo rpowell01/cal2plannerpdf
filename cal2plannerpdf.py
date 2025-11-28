@@ -227,6 +227,17 @@ def events2notes(self, pdf_file, date2update, event_list):
                             'box to add event'
                         )
 
+            current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
+            css = '* {font-family: tiro;font-size:8px;color:purple}'
+            planner_updated_location = box3 + (0, box3.bottom_left.y - 105, 0, 0)
+            rc = page.insert_htmlbox(
+                planner_updated_location,
+                '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
+                css=css,
+                scale_low=0,
+                overlay=True,
+            )
+
             line_shape = page.new_shape()
             line_shape.draw_line(box1.tr + 2, box1.br + 2)
             line_shape.finish(color=getColor('black'), fill=getColor('black'))
@@ -357,7 +368,16 @@ def events2pdf(self, pdf_file, date2update, event_list):
                 self.update_mb(
                     message_text='Insufficient space in schedule box to add event list'
                 )
-
+            current_datetime = datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p')
+            css = '* {font-family: tiro;font-size:8px;color:purple}'
+            planner_updated_location = box3 + (0, box3.bottom_left.y - 110, 0, 0)
+            rc = page.insert_htmlbox(
+                planner_updated_location,
+                '<p style="text-align: center;">Updated:' + current_datetime + '</p>',
+                css=css,
+                scale_low=0,
+                overlay=True,
+            )
             links = page.get_links()
             notes_more_location = page.search_for('More')
             link_count = 0
